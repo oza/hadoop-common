@@ -593,6 +593,13 @@ public class LocalJobRunner implements ClientProtocol {
       return new MapTaskCompletionEventsUpdate(
         org.apache.hadoop.mapred.TaskCompletionEvent.EMPTY_ARRAY, false);
     }
+
+    @Override
+    public synchronized void startNewAggregation(List<TaskAttemptID> taskIds, String message)
+        throws IOException {
+      // TODO Auto-generated method stub
+      
+    }
     
   }
 

@@ -252,6 +252,13 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
+  public void startNewAggregation(List<TaskAttemptID> taskAttemptID, String message) throws IOException {
+    // TODO: XXX implement this code.
+    LOG.info("Extended Umbilical Protocol: startNewAggregation # TaskAttemptListenerImpl");
+  }
+
+
+  @Override
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(
       JobID jobIdentifier, int fromEventId, int maxEvents,
       TaskAttemptID taskAttemptID) throws IOException {

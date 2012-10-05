@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -64,9 +65,10 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 17 Modified TaskID to be aware of the new TaskTypes
    * Version 18 Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    * Version 19 Added fatalError for child to communicate fatal errors to TT
+   * Version 20 Added support to support startNewAggregation for MAPREDUCE-4502
    * */
 
-  public static final long versionID = 19L;
+  public static final long versionID = 20L;
   
   /**
    * Called when a child task process starts, to get its task.
@@ -142,6 +144,9 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
 
   /** Report that the task encounted a fatal error.*/
   void fatalError(TaskAttemptID taskId, String message) throws IOException;
+  
+  /** Start aggregation per node or rack.*/
+  void startNewAggregation(List<TaskAttemptID> taskIds, String message) throws IOException;
   
   /** Called by a reduce task to get the map output locations for finished maps.
    * Returns an update centered around the map-task-completion-events. 
