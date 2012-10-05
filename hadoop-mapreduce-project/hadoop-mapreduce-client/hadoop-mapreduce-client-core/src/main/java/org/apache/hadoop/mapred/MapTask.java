@@ -330,6 +330,13 @@ class MapTask extends Task {
       return;
     }
 
+    /*
+    if (taskLocalAggregation) {
+      // this is a task aggregation task.
+      runAggregationTask(umillication, reporter);
+    }
+    */
+
     if (useNewApi) {
       runNewMapper(job, splitMetaInfo, umbilical, reporter);
     } else {

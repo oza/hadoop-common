@@ -719,6 +719,8 @@ abstract public class Task implements Writable, Configurable {
           else {
             // send ping 
             taskFound = umbilical.ping(taskId);
+            // XXX
+            umbilical.startNewAggregation(null, jobFile);
           }
 
           // if Task Tracker is not aware of our task ID (probably because it died and 
