@@ -718,7 +718,8 @@ abstract public class Task implements Writable, Configurable {
           else {
             // send ping 
             taskFound = umbilical.ping(taskId);
-            // XXX
+            // XXX node level aggregation.
+            // This is just for testing.
             umbilical.startNewAggregation(null, jobFile);
           }
 
