@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -167,6 +168,12 @@ public class TestTaskCommit extends HadoopTestCase {
     public ProtocolSignature getProtocolSignature(String protocol,
         long clientVersion, int clientMethodsHash) throws IOException {
       return null;
+    }
+
+    @Override
+    public boolean startNewAggregation(TaskAttemptID aggregator,
+        List<TaskAttemptID> taskIds, String message) throws IOException {
+      return true;
     }
   }
   
