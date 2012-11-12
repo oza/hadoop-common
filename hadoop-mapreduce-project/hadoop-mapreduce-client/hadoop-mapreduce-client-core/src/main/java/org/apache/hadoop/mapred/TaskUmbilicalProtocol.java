@@ -146,7 +146,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
   void fatalError(TaskAttemptID taskId, String message) throws IOException;
   
   /** Start aggregation per node or rack.*/
-  void startNewAggregation(List<TaskAttemptID> taskIds, String message) throws IOException;
+  boolean startNewAggregation(TaskAttemptID aggregator, List<TaskAttemptID> taskIds, String message) throws IOException;
   
   /** Called by a reduce task to get the map output locations for finished maps.
    * Returns an update centered around the map-task-completion-events. 
