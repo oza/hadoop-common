@@ -595,10 +595,10 @@ public class LocalJobRunner implements ClientProtocol {
     }
 
     @Override
-    public synchronized void startNewAggregation(List<TaskAttemptID> taskIds, String message)
-        throws IOException {
+    public boolean startNewAggregation(TaskAttemptID aggregator,
+        List<TaskAttemptID> taskIds, String message) throws IOException {
       // TODO Auto-generated method stub
-      
+      return true;
     }
     
   }
