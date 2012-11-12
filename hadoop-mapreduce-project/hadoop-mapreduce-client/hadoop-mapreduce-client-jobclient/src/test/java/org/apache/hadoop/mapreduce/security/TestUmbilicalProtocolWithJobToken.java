@@ -113,7 +113,7 @@ public class TestUmbilicalProtocolWithJobToken {
               TaskUmbilicalProtocol.class, TaskUmbilicalProtocol.versionID,
               addr, conf);
           proxy.ping(null);
-          proxy.startNewAggregation(null, null);
+          proxy.startNewAggregation(null, null, null);
         } finally {
           server.stop();
           if (proxy != null) {
