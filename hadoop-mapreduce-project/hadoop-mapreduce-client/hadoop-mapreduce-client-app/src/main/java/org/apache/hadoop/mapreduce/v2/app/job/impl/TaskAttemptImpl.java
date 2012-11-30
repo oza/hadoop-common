@@ -519,8 +519,8 @@ public abstract class TaskAttemptImpl implements
     attemptId.setId(i);
     this.taskAttemptListener = taskAttemptListener;
     this.appContext = appContext;
-    // TODO: Fix to pass by JobConf
-    this.isAggregationEnabled = false;
+    // TODO: Fix to pass by JobConf MR-4502
+    this.isAggregationEnabled = true;
     this.aggregationThreshold = 10;
     this.aggregationWaitMap = aggregationWaitMap;
 
@@ -1563,7 +1563,7 @@ public abstract class TaskAttemptImpl implements
       if (aggregationWaitMap.contains(hostname)) {
         ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
         
-        if (list.size() > aggregationThreshold) {
+        if (list != null && (list.size() > aggregationThreshold)) {
           shouldBeAggregator = true;
         }
       }

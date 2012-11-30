@@ -440,7 +440,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.appSubmitTime = appSubmitTime;
     this.oldJobId = TypeConverter.fromYarn(jobId);
     this.newApiCommitter = newApiCommitter;
-    this.isAggregationEnabled = false;
+    // TODO: Fix to pass by JobConf MR-4502
+    this.isAggregationEnabled = true;
 
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
@@ -1421,6 +1422,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               // MAPREDUCE-4902
               // , and start to fetch dummy file.
               for (TaskAttemptCompletionEvent ev:events) {
+                ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
                 job.taskAttemptCompletionEvents.add(ev);
               }
             } catch (MalformedURLException e) {
