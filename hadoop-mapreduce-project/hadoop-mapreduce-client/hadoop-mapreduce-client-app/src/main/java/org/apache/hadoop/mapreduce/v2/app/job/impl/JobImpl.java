@@ -1367,9 +1367,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               List<TaskAttemptCompletionEvent>events = job.aggregationWaitMap.get(hostname);
               // MAPREDUCE-4902
               // , and start to fetch dummy file.
-              for (TaskAttemptCompletionEvent ev:events) {
-                ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
-                job.taskAttemptCompletionEvents.add(ev);
+              if (events != null && events.size() > 0) {
+                for (TaskAttemptCompletionEvent ev:events) {
+                  ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
+                  job.taskAttemptCompletionEvents.add(ev);
+                }
               }
             } catch (MalformedURLException e) {
               // TODO Auto-generated catch block
