@@ -1553,26 +1553,20 @@ public abstract class TaskAttemptImpl implements
   }
 
   public boolean shouldBeAggregator() {
-    java.net.URL url;
     String hostname;
     boolean shouldBeAggregator = false;
     
-    try {
-      url = new  java.net.URL(this.nodeHttpAddress);
-      hostname = url.getHost();
-      if (aggregationWaitMap.contains(hostname)) {
-        ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
-        
-        if (list != null && (list.size() > aggregationThreshold)) {
-          shouldBeAggregator = true;
-        }
+    // java.net.URL url;
+    // url = new  java.net.URL(this.nodeHttpAddress);
+    hostname = this.nodeHttpAddress;
+    if (aggregationWaitMap.contains(hostname)) {
+      ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
+
+      if (list != null && (list.size() > aggregationThreshold)) {
+        shouldBeAggregator = true;
       }
-      
-    } catch (MalformedURLException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
     }
-    
+
     return shouldBeAggregator;
   }
 
