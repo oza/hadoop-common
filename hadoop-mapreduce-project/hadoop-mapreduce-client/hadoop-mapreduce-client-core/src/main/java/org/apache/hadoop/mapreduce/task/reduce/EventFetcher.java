@@ -173,7 +173,10 @@ class EventFetcher<K,V> extends Thread {
           LOG.info("Ignoring output of failed map TIP: '" +  
               event.getTaskAttemptId() + "'");
           break;
-        }
+        case AGGREGATED:
+          LOG.info("Ignoring output of aggregated its outputs: '" +  
+                   " aggregated: '" + event.getTaskAttemptId() + "'");
+          break;
       }
     } while (events.length == maxEventsToFetch);
 

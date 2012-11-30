@@ -330,20 +330,51 @@ class MapTask extends Task {
       return;
     }
 
-    /*
-    if (taskLocalAggregation) {
-      // this is a task aggregation task.
-      runAggregationTask(umillication, reporter);
-    }
-    */
 
     if (useNewApi) {
       runNewMapper(job, splitMetaInfo, umbilical, reporter);
     } else {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
+    
+    /*
+    boolean taskLocalAggregation = true;
+    if (tryGetLocalAggregationLeader() && canStartLocalAggregation()) {
+      // Start to aggregation.
+      runAggregation(job, umbilical, reporter);
+    }
+    */
+    
     done(umbilical, reporter);
   }
+  
+  /*
+    boolean tryGetLocalAggregationLeader() {
+    
+      try {
+        String jobTempDir = conf.get(MRJobConfig.MAPREDUCE_JOB_DIR);
+        Path jobTempDirPath = new Path(jobTempDir);
+        FileSystem fs = jobTempDirPath.getFileSystem(conf);
+      } catch() {
+        // handle lock related Exception.
+        // must cleanup.
+      }
+      // 
+    }
+   */
+  
+  /**
+  void runAggregation(job, umbilical, reporter) {
+    try {
+      combine()
+      aggregationSuccess();
+    } finally {
+      releaseAggregationLeader()
+      // in this case, aggregationError is reported to MRAppMaster.
+      aggregationError();
+    }
+  }
+   */
 
  @SuppressWarnings("unchecked")
  private <T> T getSplitDetails(Path file, long offset) 

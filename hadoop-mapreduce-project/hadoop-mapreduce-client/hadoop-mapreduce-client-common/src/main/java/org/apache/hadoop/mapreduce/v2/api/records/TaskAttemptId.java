@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * <p>
  * <code>TaskAttemptId</code> represents the unique identifier for a task
@@ -47,7 +49,9 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
   public abstract void setId(int id);
 
   protected static final String TASKATTEMPT = "attempt";
-
+  
+  protected AtomicBoolean isAggregating;
+  
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -101,4 +105,13 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
       return taskIdComp;
     }
   }
+  
+  public void setAaggregationMode(boolean flag) {
+    isAggregating.set(flag);
+  }
+
+  public boolean isAggregating() {
+    return isAggregating.get();
+  }
+  
 }

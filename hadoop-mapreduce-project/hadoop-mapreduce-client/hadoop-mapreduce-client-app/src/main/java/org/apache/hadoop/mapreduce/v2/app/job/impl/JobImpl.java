@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -95,6 +98,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.mapreduce.v2.app.webapp.AttemptsPage;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
@@ -161,6 +165,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    */
   private final HashMap<NodeId, List<TaskAttemptId>> 
     nodesToSucceededTaskAttempts = new HashMap<NodeId, List<TaskAttemptId>>();
+  private AggregationWaitMap aggregationWaitMap;
 
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
@@ -411,6 +416,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
 
+  private final boolean isAggregationEnabled;
+
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener,
@@ -433,6 +440,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.appSubmitTime = appSubmitTime;
     this.oldJobId = TypeConverter.fromYarn(jobId);
     this.newApiCommitter = newApiCommitter;
+    this.isAggregationEnabled = false;
 
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
@@ -473,6 +481,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   JobContext getJobContext() {
     return this.jobContext;
   }
+  
+  public int getNumberOfTaskOnTheHost() {
+    return this.numMapTasks;
+  }
 
   @Override
   public boolean checkAccess(UserGroupInformation callerUGI, 
@@ -497,6 +509,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public int getCompletedMaps() {
     readLock.lock();
+    // TODO: MR-3902, add aggregated map.
     try {
       return succeededMapTaskCount + failedMapTaskCount + killedMapTaskCount;
     } finally {
@@ -889,7 +902,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public List<AMInfo> getAMInfos() {
     return amInfos;
   }
-
+  
   /**
    * Decide whether job can be run in uber mode based on various criteria.
    * @param dataInputLength Total length for all splits
@@ -1173,6 +1186,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.eventHandler, 
                 job.remoteJobConfFile, 
                 job.conf, splits[i], 
+                job.aggregationWaitMap,
                 job.taskAttemptListener, 
                 job.committer, job.jobToken, job.fsTokens,
                 job.clock, job.completedTasksFromPreviousRun, 
@@ -1369,7 +1383,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       TaskAttemptCompletionEvent tce = 
         ((JobTaskAttemptCompletedEvent) event).getCompletionEvent();
       // Add the TaskAttemptCompletionEvent
-      //eventId is equal to index in the arraylist
+      // eventId is equal to index in the ArrayList
       tce.setEventId(job.taskAttemptCompletionEvents.size());
       job.taskAttemptCompletionEvents.add(tce);
       if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
@@ -1377,6 +1391,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       }
       
       TaskAttemptId attemptId = tce.getAttemptId();
+
       TaskId taskId = attemptId.getTaskId();
       //make the previous completion event as obsolete if it exists
       Object successEventNo = 
@@ -1391,6 +1406,53 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       // attempt being removed above - MAPREDUCE-4330
       if (TaskAttemptCompletionEventStatus.SUCCEEDED.equals(tce.getStatus())) {
         job.successAttemptCompletionEventNoMap.put(taskId, tce.getEventId());
+        
+        // MAPREDUCE-4902
+        // if the succeeded attemptId is aggregation leader, 
+        // put success events into successAttemptCompletionEventNoMap.
+        if (job.isAggregationEnabled) {
+          if (attemptId.isAggregating()) {
+            URL url;
+            String hostname;
+            try {
+              url = new URL(tce.getMapOutputServerAddress());
+              hostname = url.getHost();
+              List<TaskAttemptCompletionEvent>events = job.aggregationWaitMap.get(hostname);
+              // MAPREDUCE-4902
+              // , and start to fetch dummy file.
+              for (TaskAttemptCompletionEvent ev:events) {
+                job.taskAttemptCompletionEvents.add(ev);
+              }
+            } catch (MalformedURLException e) {
+              // TODO Auto-generated catch block
+              e.printStackTrace();
+            }
+          } else {
+            URL url;
+            String hostname;
+            try {
+              url = new URL(tce.getMapOutputServerAddress());
+              hostname = url.getHost();
+              if (job.shouldWaitForAggregation()) {
+                // wait until finishing aggregation.
+                job.aggregationWaitMap.put(hostname, tce);
+              } else {
+                // This is final phase of map.
+                for (Entry<String, ArrayList<TaskAttemptCompletionEvent>> entry
+                    :job.aggregationWaitMap.entrySet()) {
+                  ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
+                  for (TaskAttemptCompletionEvent ev:events) {
+                    job.taskAttemptCompletionEvents.add(ev);
+                  }
+                }
+                job.aggregationWaitMap.clear();
+              }
+            } catch (MalformedURLException e) {
+              // TODO Auto-generated catch block
+              e.printStackTrace();
+            }
+          }
+        }
         
         // here we could have simply called Task.getSuccessfulAttempt() but
         // the event that triggers this code is sent before
@@ -1572,6 +1634,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     diagnostics.add(diag);
   }
   
+  public boolean shouldWaitForAggregation() {
+    boolean shouldWait = false;
+    int remain =  getTotalMaps() - getCompletedMaps();
+    
+    if (remain > 1){ 
+      shouldWait = true;
+    }
+    return shouldWait;
+  }
+
   private static class DiagnosticsUpdateTransition implements
       SingleArcTransition<JobImpl, JobEvent> {
     @Override

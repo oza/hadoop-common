@@ -251,9 +251,9 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public boolean startNewAggregation(TaskAttemptID aggregator, List<TaskAttemptID> taskAttemptID, String message) throws IOException {
+  public boolean canStartLocalAggregation(TaskAttemptID aggregator, List<TaskAttemptID> taskAttemptID, String message) throws IOException {
     // TODO: XXX implement this code.
-    LOG.info("Extended Umbilical Protocol: startNewAggregation # TaskAttemptListenerImpl");
+    LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag());
     return false;
   }
 

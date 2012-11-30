@@ -257,7 +257,7 @@ public class TestTaskAttempt{
     TaskAttemptImpl taImpl =
         new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
             taskSplitMetaInfo, jobConf, taListener, outputCommitter, null,
-            null, clock, null);
+            null, clock, null, null);
     return taImpl;
   }
 
@@ -343,7 +343,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           mock(OutputCommitter.class), mock(Token.class), new Credentials(),
-          new SystemClock(), null);
+          new SystemClock(), null, null);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
@@ -398,7 +398,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           mock(OutputCommitter.class), mock(Token.class), new Credentials(),
-          new SystemClock(), appCtx);
+          new SystemClock(), null, appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
@@ -454,7 +454,7 @@ public class TestTaskAttempt{
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           mock(OutputCommitter.class), mock(Token.class), new Credentials(),
-          new SystemClock(), appCtx);
+          new SystemClock(), new AggregationWaitMap(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
@@ -508,12 +508,13 @@ public class TestTaskAttempt{
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(clusterInfo.getMinContainerCapability()).thenReturn(resource);
     when(resource.getMemory()).thenReturn(1024);
-
+    
+    
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
           splits, jobConf, taListener,
           mock(OutputCommitter.class), mock(Token.class), new Credentials(),
-          new SystemClock(), appCtx);
+          new SystemClock(), new AggregationWaitMap(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
