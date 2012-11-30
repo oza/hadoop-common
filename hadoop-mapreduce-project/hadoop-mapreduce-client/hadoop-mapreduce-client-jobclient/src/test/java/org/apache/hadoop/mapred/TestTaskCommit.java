@@ -171,7 +171,7 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
-    public boolean startNewAggregation(TaskAttemptID aggregator,
+    public boolean canStartLocalAggregation(TaskAttemptID aggregator,
         List<TaskAttemptID> taskIds, String message) throws IOException {
       return true;
     }

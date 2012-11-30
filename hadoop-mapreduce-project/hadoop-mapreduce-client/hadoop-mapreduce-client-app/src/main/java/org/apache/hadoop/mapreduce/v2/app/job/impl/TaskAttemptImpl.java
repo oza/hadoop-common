@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -68,6 +69,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionE
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -175,7 +177,8 @@ public abstract class TaskAttemptImpl implements
   private int shufflePort = -1;
   private String trackerName;
   private int httpPort;
-
+  private AggregationWaitMap aggregationWaitMap ;
+  
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
 
@@ -484,6 +487,8 @@ public abstract class TaskAttemptImpl implements
   
   //this is the last status reported by the REMOTE running attempt
   private TaskAttemptStatus reportedStatus;
+  private final int aggregationThreshold;
+  private boolean isAggregationEnabled;
   
   private static final String LINE_SEPARATOR = System
       .getProperty("line.separator");
@@ -494,6 +499,7 @@ public abstract class TaskAttemptImpl implements
       JobConf conf, String[] dataLocalHosts, OutputCommitter committer,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
+      AggregationWaitMap aggregationWaitMap,
       AppContext appContext) {
     oldJobId = TypeConverter.fromYarn(taskId.getJobId());
     this.conf = conf;
@@ -503,6 +509,10 @@ public abstract class TaskAttemptImpl implements
     attemptId.setId(i);
     this.taskAttemptListener = taskAttemptListener;
     this.appContext = appContext;
+    // TODO: Fix to pass by JobConf
+    this.isAggregationEnabled = false;
+    this.aggregationThreshold = 10;
+    this.aggregationWaitMap = aggregationWaitMap;
 
     // Initialize reportedStatus
     reportedStatus = new TaskAttemptStatus();
@@ -915,7 +925,7 @@ public abstract class TaskAttemptImpl implements
       readLock.unlock();
     }
   }
-
+  
   @Override
   public List<String> getDiagnostics() {
     List<String> result = new ArrayList<String>();
@@ -1222,6 +1232,11 @@ public abstract class TaskAttemptImpl implements
           taskAttempt.containerNodeId.getHost()).getNetworkLocation();
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();
+      
+      if (taskAttempt.isAggregationEnabled && taskAttempt.shouldBeAggregator()) {
+        taskAttempt.getID().setAaggregationMode(true);
+      }
+      
       // this is a _real_ Task (classic Hadoop mapred flavor):
       taskAttempt.remoteTask = taskAttempt.createRemoteTask();
       taskAttempt.jvmID = new WrappedJvmID(
@@ -1395,6 +1410,7 @@ public abstract class TaskAttemptImpl implements
 
   private static class SucceededTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+    
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, 
@@ -1410,9 +1426,10 @@ public abstract class TaskAttemptImpl implements
           slotMillis);
       taskAttempt.eventHandler.handle(jce);
       taskAttempt.logAttemptFinishedEvent(TaskAttemptState.SUCCEEDED);
+      
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-          taskAttempt.attemptId,
-          TaskEventType.T_ATTEMPT_SUCCEEDED));
+        taskAttempt.attemptId,
+        TaskEventType.T_ATTEMPT_SUCCEEDED));
       taskAttempt.eventHandler.handle
       (new SpeculatorEvent
           (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
@@ -1484,6 +1501,30 @@ public abstract class TaskAttemptImpl implements
          eventHandler.handle(
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
     }
+  }
+
+  public boolean shouldBeAggregator() {
+    java.net.URL url;
+    String hostname;
+    boolean shouldBeAggregator = false;
+    
+    try {
+      url = new  java.net.URL(this.nodeHttpAddress);
+      hostname = url.getHost();
+      if (aggregationWaitMap.contains(hostname)) {
+        ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
+        
+        if (list.size() > aggregationThreshold) {
+          shouldBeAggregator = true;
+        }
+      }
+      
+    } catch (MalformedURLException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    
+    return shouldBeAggregator;
   }
 
   private static class TooManyFetchFailureTransition implements
