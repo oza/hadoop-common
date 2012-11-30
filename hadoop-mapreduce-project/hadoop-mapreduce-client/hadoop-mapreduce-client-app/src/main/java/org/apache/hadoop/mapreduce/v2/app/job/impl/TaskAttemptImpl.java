@@ -179,7 +179,7 @@ public abstract class TaskAttemptImpl implements
   private int shufflePort = -1;
   private String trackerName;
   private int httpPort;
-  private AggregationWaitMap aggregationWaitMap ;
+  private final AggregationWaitMap aggregationWaitMap ;
   
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
@@ -522,7 +522,12 @@ public abstract class TaskAttemptImpl implements
     // TODO: Fix to pass by JobConf MR-4502
     this.isAggregationEnabled = true;
     this.aggregationThreshold = 10;
-    this.aggregationWaitMap = aggregationWaitMap;
+    
+    if (taskId.getTaskType() ==  TaskType.MAP) {
+      this.aggregationWaitMap = aggregationWaitMap;
+    } else {
+      this.aggregationWaitMap = null;
+    }
 
     // Initialize reportedStatus
     reportedStatus = new TaskAttemptStatus();
@@ -1281,7 +1286,9 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();
       
-      if (taskAttempt.isAggregationEnabled && taskAttempt.shouldBeAggregator()) {
+      if (taskAttempt.isAggregationEnabled && 
+          taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP &&
+          taskAttempt.shouldBeAggregator()) {
         taskAttempt.getID().setAaggregationMode(true);
       }
       
