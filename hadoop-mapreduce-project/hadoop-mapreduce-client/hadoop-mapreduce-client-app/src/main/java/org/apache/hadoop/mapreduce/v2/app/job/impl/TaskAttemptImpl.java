@@ -1287,9 +1287,10 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();
       
       if (taskAttempt.isAggregationEnabled && 
-          taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP &&
-          taskAttempt.shouldBeAggregator()) {
-        taskAttempt.getID().setAaggregationMode(true);
+          taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
+        if (taskAttempt.shouldBeAggregator()) {
+          taskAttempt.getID().setAaggregationMode(true);
+        }
       }
       
       // this is a _real_ Task (classic Hadoop mapred flavor):
@@ -1565,6 +1566,12 @@ public abstract class TaskAttemptImpl implements
     
     // java.net.URL url;
     // url = new  java.net.URL(this.nodeHttpAddress);
+    if (aggregationWaitMap == null) {
+      LOG.warn("[BUG] aggregationWaitMap is null, this seems to be BUG. " +
+      		"taskAttemptId is :" + getID().toString());
+      return shouldBeAggregator;
+    }
+    
     hostname = this.nodeHttpAddress;
     if (aggregationWaitMap.contains(hostname)) {
       ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
