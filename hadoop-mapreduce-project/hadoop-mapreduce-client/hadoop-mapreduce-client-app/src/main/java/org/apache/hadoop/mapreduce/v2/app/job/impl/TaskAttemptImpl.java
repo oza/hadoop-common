@@ -1575,7 +1575,6 @@ public abstract class TaskAttemptImpl implements
     hostname = this.nodeHttpAddress;
     if (aggregationWaitMap.contains(hostname)) {
       ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
-
       if (list != null && (list.size() > aggregationThreshold)) {
         shouldBeAggregator = true;
       }
