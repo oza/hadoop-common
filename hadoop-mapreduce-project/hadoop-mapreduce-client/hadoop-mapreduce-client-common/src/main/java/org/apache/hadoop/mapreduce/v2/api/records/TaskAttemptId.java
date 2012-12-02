@@ -50,7 +50,7 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
 
   protected static final String TASKATTEMPT = "attempt";
   
-  protected AtomicBoolean isAggregating;
+  protected final AtomicBoolean isAggregating = new AtomicBoolean(false);
   
   @Override
   public int hashCode() {
