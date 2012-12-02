@@ -1327,7 +1327,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   private static class TaskAttemptCompletedEventTransition implements
-      SingleArcTransition<JobImpl, JobEvent> {
+      SingleArcTransition<JobImpl, JobEvent> throws MalformedURLException {
     @Override
     public void transition(JobImpl job, JobEvent event) {
       TaskAttemptCompletionEvent tce = 
@@ -1361,43 +1361,35 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           if (attemptId.isAggregating()) {
             URL url;
             String hostname;
-            try {
-              url = new URL(tce.getMapOutputServerAddress());
-              hostname = url.getHost();
-              List<TaskAttemptCompletionEvent>events = job.aggregationWaitMap.get(hostname);
-              // MAPREDUCE-4902
-              // , and start to fetch dummy file.
-              if (events != null && events.size() > 0) {
-                for (TaskAttemptCompletionEvent ev:events) {
-                  ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
-                  job.taskAttemptCompletionEvents.add(ev);
-                }
+            url = new URL(tce.getMapOutputServerAddress());
+            hostname = url.getHost();
+            List<TaskAttemptCompletionEvent>events = job.aggregationWaitMap.get(hostname);
+            // MAPREDUCE-4902
+            // , and start to fetch dummy file.
+            if (events != null && events.size() > 0) {
+              for (TaskAttemptCompletionEvent ev:events) {
+                ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
+                job.taskAttemptCompletionEvents.add(ev);
               }
-            } catch (MalformedURLException e) {
-              LOG.warn("[BUG][MR-4502] stacktrace:" +  e.getStackTrace().toString());
             }
           } else {
             URL url;
             String hostname;
-            try {
-              url = new URL(tce.getMapOutputServerAddress());
-              hostname = url.getHost();
-              if (job.shouldWaitForAggregation()) {
-                // wait until finishing aggregation.
-                job.aggregationWaitMap.put(hostname, tce);
-              } else {
-                // This is final phase of map.
-                for (Entry<String, ArrayList<TaskAttemptCompletionEvent>> entry
-                    :job.aggregationWaitMap.entrySet()) {
-                  ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
-                  for (TaskAttemptCompletionEvent ev:events) {
-                    job.taskAttemptCompletionEvents.add(ev);
-                  }
+            url = new URL(tce.getMapOutputServerAddress());
+            hostname = url.getHost();
+            if (job.shouldWaitForAggregation()) {
+              // wait until finishing aggregation.
+              job.aggregationWaitMap.put(hostname, tce);
+            } else {
+              // This is final phase of map.
+              for (Entry<String, ArrayList<TaskAttemptCompletionEvent>> entry
+                  :job.aggregationWaitMap.entrySet()) {
+                ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
+                for (TaskAttemptCompletionEvent ev:events) {
+                  job.taskAttemptCompletionEvents.add(ev);
                 }
-                job.aggregationWaitMap.clear();
               }
-            } catch (MalformedURLException e) {
-              LOG.warn("[BUG][MR-4502] stacktrace:" +  e.getStackTrace().toString());
+              job.aggregationWaitMap.clear();
             }
           }
         }
