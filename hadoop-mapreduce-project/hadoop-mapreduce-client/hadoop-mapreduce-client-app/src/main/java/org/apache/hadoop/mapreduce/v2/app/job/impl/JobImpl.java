@@ -163,7 +163,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    */
   private final HashMap<NodeId, List<TaskAttemptId>> 
     nodesToSucceededTaskAttempts = new HashMap<NodeId, List<TaskAttemptId>>();
-  private AggregationWaitMap aggregationWaitMap;
+  private AggregationWaitMap aggregationWaitMap = new AggregationWaitMap();
 
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
@@ -1374,8 +1374,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 }
               }
             } catch (MalformedURLException e) {
-              // TODO Auto-generated catch block
-              e.printStackTrace();
+              LOG.warn("[BUG][MR-4502] stacktrace:" +  e.getStackTrace().toString());
             }
           } else {
             URL url;
@@ -1398,8 +1397,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.aggregationWaitMap.clear();
               }
             } catch (MalformedURLException e) {
-              // TODO Auto-generated catch block
-              e.printStackTrace();
+              LOG.warn("[BUG][MR-4502] stacktrace:" +  e.getStackTrace().toString());
             }
           }
         }
