@@ -336,13 +336,13 @@ class MapTask extends Task {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
     
-    /*
-    boolean taskLocalAggregation = true;
-    if (tryGetLocalAggregationLeader() && canStartLocalAggregation()) {
+    if (getTaskID().getAggregatingFlag()) {
       // Start to aggregation.
-      runAggregation(job, umbilical, reporter);
+      //runAggregation(job, umbilical, reporter);
+      LOG.info("[MR-4502]: I'm aggregator! ID is :" + getTaskID());
+    } else {
+      LOG.info("[MR-4502]: I'm NOT aggregator... ID is:" + getTaskID());
     }
-    */
     
     done(umbilical, reporter);
   }
