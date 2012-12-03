@@ -499,7 +499,8 @@ public class MRAppMaster extends CompositeService {
         new JobImpl(jobId, appAttemptID, conf, dispatcher.getEventHandler(),
             taskAttemptListener, jobTokenSecretManager, fsTokens, clock,
             completedTasksFromPreviousRun, metrics, committer, newApiCommitter,
-            currentUser.getUserName(), appSubmitTime, amInfos, context);
+            currentUser.getUserName(), appSubmitTime, amInfos, context)
+       .registerAggregatorMap(aggregatorMap);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,
@@ -587,6 +588,7 @@ public class MRAppMaster extends CompositeService {
   protected TaskAttemptListener createTaskAttemptListener(AppContext context) {
     TaskAttemptListener lis =
         new TaskAttemptListenerImpl(context, jobTokenSecretManager);
+    lis.registerAggregatorMap(aggregatorMap);
     return lis;
   }
 

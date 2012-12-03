@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.WrappedJvmID;
@@ -57,4 +58,6 @@ public interface TaskAttemptListener {
    */
   void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID);
 
+  // MR-4502
+  public void registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map);
 }
