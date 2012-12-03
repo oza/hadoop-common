@@ -721,7 +721,8 @@ abstract public class Task implements Writable, Configurable {
             taskFound = umbilical.ping(taskId);
             // XXX node level aggregation.
             // This is just for testing.
-            umbilical.canStartLocalAggregation(taskId, null, jobFile);
+            // umbilical.canStartLocalAggregation(taskId, null, jobFile);
+            // umbilical.canStartLocalAggregation(taskId);
           }
 
           // if Task Tracker is not aware of our task ID (probably because it died and 

@@ -337,7 +337,7 @@ class MapTask extends Task {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
     
-    if (getTaskID().getAggregatingFlag()) {
+    if (umbilical.canStartLocalAggregation(getTaskID())) {
       // Start to aggregation.
       //runAggregation(job, umbilical, reporter);
       LOG.info("[MR-4502]: I'm aggregator! ID is :" + getTaskID());
