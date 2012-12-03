@@ -91,6 +91,10 @@ public class TaskAttemptListenerImpl extends CompositeService
     this.context = context;
     this.jobTokenSecretManager = jobTokenSecretManager;
   }
+  
+  public void registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map) {
+    aggregatorMap = map;
+  }
 
   @Override
   public void init(Configuration conf) {

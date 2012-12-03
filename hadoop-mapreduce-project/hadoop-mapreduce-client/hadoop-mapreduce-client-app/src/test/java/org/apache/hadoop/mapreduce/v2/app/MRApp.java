@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
+import java.util.concurrent.ConcurrentMap;
 
 import junit.framework.Assert;
 
@@ -370,6 +371,10 @@ public class MRApp extends MRAppMaster {
       @Override
       public void registerPendingTask(org.apache.hadoop.mapred.Task task,
           WrappedJvmID jvmID) {
+      }
+      @Override
+      public void registerAggregatorMap(
+          ConcurrentMap<TaskAttemptId, Boolean> map) {
       }
     };
   }

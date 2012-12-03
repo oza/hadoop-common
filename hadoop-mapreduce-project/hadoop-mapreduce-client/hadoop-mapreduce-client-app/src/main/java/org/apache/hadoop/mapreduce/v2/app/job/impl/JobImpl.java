@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -479,6 +480,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   
   public int getNumberOfTaskOnTheHost() {
     return this.numMapTasks;
+  }
+  
+  public JobImpl registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map) {
+    aggregatorMap = map;
+    return this;
   }
 
   @Override
