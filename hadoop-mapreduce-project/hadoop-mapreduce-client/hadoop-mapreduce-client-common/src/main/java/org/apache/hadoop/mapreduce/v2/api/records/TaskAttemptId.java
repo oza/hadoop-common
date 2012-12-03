@@ -106,7 +106,7 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
     }
   }
   
-  public void setAaggregationMode(boolean flag) {
+  public void setAggregationMode(boolean flag) {
     isAggregating.set(flag);
   }
 
