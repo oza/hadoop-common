@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -408,6 +409,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private JobTokenSecretManager jobTokenSecretManager;
 
   private final boolean isAggregationEnabled;
+  private ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
+  
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,

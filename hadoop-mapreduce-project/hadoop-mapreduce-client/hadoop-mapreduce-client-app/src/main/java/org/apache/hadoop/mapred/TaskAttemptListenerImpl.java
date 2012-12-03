@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
@@ -70,6 +71,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   private static final JvmTask TASK_FOR_INVALID_JVM = new JvmTask(null, true);
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptListenerImpl.class);
+  private ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
 
   private AppContext context;
   private Server server;
