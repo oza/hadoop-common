@@ -143,8 +143,7 @@ public class TestMapProgress extends TestCase {
     }
 
     @Override
-    public boolean canStartLocalAggregation(TaskAttemptID aggregator,
-        List<TaskAttemptID> taskIds, String message) throws IOException {
+    public boolean canStartLocalAggregation(TaskAttemptID aggregator) throws IOException {
       return true;
     }
   }
