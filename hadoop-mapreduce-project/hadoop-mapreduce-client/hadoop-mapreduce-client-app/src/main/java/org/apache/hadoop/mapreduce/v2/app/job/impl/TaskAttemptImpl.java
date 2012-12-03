@@ -1288,7 +1288,7 @@ public abstract class TaskAttemptImpl implements
       if (taskAttempt.isAggregationEnabled && 
           taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
         if (taskAttempt.shouldBeAggregator()) {
-          taskAttempt.getID().setAaggregationMode(true);
+          taskAttempt.getID().setAggregationMode(true);
         }
       }
       
