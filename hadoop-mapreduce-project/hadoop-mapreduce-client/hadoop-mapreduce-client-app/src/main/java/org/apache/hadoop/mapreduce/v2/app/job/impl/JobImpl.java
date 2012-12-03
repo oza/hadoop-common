@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1327,7 +1326,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   private static class TaskAttemptCompletedEventTransition implements
-      SingleArcTransition<JobImpl, JobEvent> throws MalformedURLException {
+      SingleArcTransition<JobImpl, JobEvent> {
     @Override
     public void transition(JobImpl job, JobEvent event) {
       TaskAttemptCompletionEvent tce = 
@@ -1359,10 +1358,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // put success events into successAttemptCompletionEventNoMap.
         if (job.isAggregationEnabled) {
           if (attemptId.isAggregating()) {
-            URL url;
-            String hostname;
-            url = new URL(tce.getMapOutputServerAddress());
-            hostname = url.getHost();
+            String hostname = tce.getMapOutputServerAddress();
             List<TaskAttemptCompletionEvent>events = job.aggregationWaitMap.get(hostname);
             // MAPREDUCE-4902
             // , and start to fetch dummy file.
@@ -1373,10 +1369,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               }
             }
           } else {
-            URL url;
-            String hostname;
-            url = new URL(tce.getMapOutputServerAddress());
-            hostname = url.getHost();
+            String hostname = tce.getMapOutputServerAddress();
             if (job.shouldWaitForAggregation()) {
               // wait until finishing aggregation.
               job.aggregationWaitMap.put(hostname, tce);
