@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -1564,8 +1563,6 @@ public abstract class TaskAttemptImpl implements
     String hostname;
     boolean shouldBeAggregator = false;
     
-    // java.net.URL url;
-    // url = new  java.net.URL(this.nodeHttpAddress);
     if (aggregationWaitMap == null) {
       LOG.warn("[BUG] aggregationWaitMap is null, this seems to be BUG. " +
       		"taskAttemptId is :" + getID().toString());
