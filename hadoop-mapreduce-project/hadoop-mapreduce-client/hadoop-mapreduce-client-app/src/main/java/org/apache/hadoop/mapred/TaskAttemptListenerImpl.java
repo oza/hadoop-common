@@ -286,7 +286,7 @@ public class TaskAttemptListenerImpl extends CompositeService
      aggregationTargets.add(aggregator);
     }
     
-    TaskAttemptID[] attempts = new TaskAttemptID[aggregationTargets.size()];
+    TaskAttemptID[] attempts = aggregationTargets.toArray(new TaskAttemptID[0]);
     return new AggregationTarget(attempts);
   }
 
