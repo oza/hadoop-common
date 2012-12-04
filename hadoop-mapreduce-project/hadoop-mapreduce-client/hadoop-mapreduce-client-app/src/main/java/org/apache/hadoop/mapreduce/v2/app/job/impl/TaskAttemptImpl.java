@@ -1597,6 +1597,7 @@ public abstract class TaskAttemptImpl implements
     hostname = this.nodeHttpAddress.split(":")[0];
     ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap
       = this.getID().getAggregatingTargets();
+    LOG.info("[MR-4502] hostname: " + hostname);
     LOG.info("[MR-4502] check aggregationWaitMap :" + aggregationWaitMap.containsKey(hostname));
     if (aggregationWaitMap.containsKey(hostname)) {
       ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
