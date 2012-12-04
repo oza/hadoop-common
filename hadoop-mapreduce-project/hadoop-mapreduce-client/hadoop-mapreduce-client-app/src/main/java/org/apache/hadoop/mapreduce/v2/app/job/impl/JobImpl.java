@@ -1395,7 +1395,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             
             if (job.shouldWaitForAggregation()) {
               // wait until finishing aggregation.
-              LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.\n hostname is :" + hostname);
+              LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.hostname is :" + hostname);
               job.aggregationWaitMap.put(hostname, tce);
             } else {
               // This is final phase of map.
