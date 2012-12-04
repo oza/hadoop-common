@@ -1438,7 +1438,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               }
             }
           } else {
-            String hostname = tce.getMapOutputServerAddress();
+            String hostname = null;
+            java.net.URL url;
+            try {
+              url = new java.net.URL(tce.getMapOutputServerAddress());
+              hostname = url.getHost();
+            } catch (Exception e) {
+              LOG.error(e.toString());
+            }
+            
             if (job.shouldWaitForAggregation()) {
               // wait until finishing aggregation.
               LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.\n hostname is :" + hostname);

@@ -1584,9 +1584,8 @@ public abstract class TaskAttemptImpl implements
   }
 
   public boolean shouldBeAggregator() {
-    String hostname = null;
+    String hostname;
     boolean shouldBeAggregator = false;
-    java.net.URL url;
     
     if (aggregationWaitMap == null) {
       LOG.warn("[BUG] aggregationWaitMap is null, this seems to be BUG. " +
@@ -1594,18 +1593,11 @@ public abstract class TaskAttemptImpl implements
       return shouldBeAggregator;
     }
     
-    try {
-      url = new java.net.URL(this.nodeHttpAddress);
-      hostname = url.getHost();
-    } catch (Exception e) {
-      // TODO: handle exception
-      return false;
-    }
-    
+    // FIXME: A bit dangerous.
+    hostname = this.nodeHttpAddress.split(":")[0];
     ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap
       = this.getID().getAggregatingTargets();
-    LOG.info("[MR-4502] check aggregationWaitMap " + hostname + " " +
-      aggregationWaitMap.containsKey(hostname));
+    LOG.info("[MR-4502] check aggregationWaitMap :" + aggregationWaitMap.containsKey(hostname));
     if (aggregationWaitMap.containsKey(hostname)) {
       ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
       LOG.info("[MR-4502]" + " hostname is " + hostname + "list size is:" + list.size());
