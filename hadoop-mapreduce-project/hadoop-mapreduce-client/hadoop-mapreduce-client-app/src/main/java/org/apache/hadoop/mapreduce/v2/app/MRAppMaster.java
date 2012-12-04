@@ -500,7 +500,7 @@ public class MRAppMaster extends CompositeService {
             taskAttemptListener, jobTokenSecretManager, fsTokens, clock,
             completedTasksFromPreviousRun, metrics, committer, newApiCommitter,
             currentUser.getUserName(), appSubmitTime, amInfos, context)
-       .registerAggregatorMap(aggregatorMap);
+        .registerAggregatorMap(aggregatorMap);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,
