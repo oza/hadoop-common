@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import junit.framework.Assert;
@@ -44,6 +45,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -429,7 +431,8 @@ public class MRApp extends MRAppMaster {
           WrappedJvmID jvmID) {
       }
       @Override
-      public void registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
+      public void registerAggregatorMap(
+          ConcurrentMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap) {
       }
     };
   }

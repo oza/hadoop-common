@@ -416,7 +416,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private JobTokenSecretManager jobTokenSecretManager;
 
   private final boolean isAggregationEnabled;
-  private ConcurrentMap<String, Boolean> aggregatorMap;
+  private ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap;
   
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
@@ -488,7 +488,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return this.numMapTasks;
   }
   
-  public JobImpl registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
+  public JobImpl registerAggregatorMap(ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> map) {
     aggregatorMap = map;
     return this;
   }
@@ -1421,13 +1421,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         if (job.isAggregationEnabled) {
           if (attemptId.isAggregating()) {
             LOG.info("[MR-4502] Aggregator succeeded to local aggregation.");
-            String hostname = tce.getMapOutputServerAddress();
+            String taskIdString = taskId.toString();
             List<TaskAttemptCompletionEvent>events;
-            ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap =
-                attemptId.getAggregatingTargets();
                 
-            if (localMap.containsKey(hostname)) {
-              events = localMap.get(hostname);
+            if (job.aggregatorMap.containsKey(taskIdString)) {
+              events = job.aggregatorMap.get(taskIdString);
               // MAPREDUCE-4902
               if (events != null && events.size() > 0) {
                 for (TaskAttemptCompletionEvent ev:events) {

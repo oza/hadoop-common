@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -71,7 +72,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   private static final JvmTask TASK_FOR_INVALID_JVM = new JvmTask(null, true);
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptListenerImpl.class);
-  private ConcurrentMap<String, Boolean> aggregatorMap;
+  private ConcurrentMap<String,List<TaskAttemptCompletionEvent>> aggregatorMap;
 
   private AppContext context;
   private Server server;
@@ -92,7 +93,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     this.jobTokenSecretManager = jobTokenSecretManager;
   }
   
-  public void registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
+  public void registerAggregatorMap(ConcurrentMap<String, List<TaskAttemptCompletionEvent>> map) {
     aggregatorMap = map;
   }
 
@@ -258,16 +259,28 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public boolean canStartLocalAggregation(TaskAttemptID aggregator) throws IOException {
+  public List<TaskAttemptID> getAggregationTargets(TaskAttemptID aggregator) throws IOException {
     // TODO: XXX implement this code.
     LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag()
         + "," + aggregator.getId() + "," + aggregator.getTaskID());
-    boolean canStart = false;
-    if (aggregatorMap.containsKey(aggregator.getTaskID().toString())) {
-      canStart = aggregatorMap.get(aggregator.getTaskID().toString()) ;
-      LOG.info("[MR-4502] canStart is" + canStart);
+    List<TaskAttemptCompletionEvent> events;
+    String taskId = aggregator.getTaskID().toString();
+    List<TaskAttemptID> aggregationTargets = new ArrayList<TaskAttemptID>();
+    
+    if (aggregatorMap.containsKey(taskId)) {
+      events = aggregatorMap.get(taskId) ;
+      
+      if (events.size() > 1) {
+        for(TaskAttemptCompletionEvent ev:events){
+          TaskAttemptID attemptID = TypeConverter.fromYarn(ev.getAttemptId());
+          aggregationTargets.add(attemptID);
+        }
+      } 
+        
+      LOG.info("[MR-4502] target size is " + aggregationTargets.size());
     }
-    return canStart;
+    
+    return aggregationTargets;
   }
 
 
