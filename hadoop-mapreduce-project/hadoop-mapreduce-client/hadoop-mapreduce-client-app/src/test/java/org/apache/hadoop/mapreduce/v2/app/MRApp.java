@@ -373,8 +373,7 @@ public class MRApp extends MRAppMaster {
           WrappedJvmID jvmID) {
       }
       @Override
-      public void registerAggregatorMap(
-          ConcurrentMap<TaskAttemptId, Boolean> map) {
+      public void registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
       }
     };
   }

@@ -59,5 +59,5 @@ public interface TaskAttemptListener {
   void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID);
 
   // MR-4502
-  public void registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map);
+  public void registerAggregatorMap(ConcurrentMap<String, Boolean> aggregatorMap);
 }

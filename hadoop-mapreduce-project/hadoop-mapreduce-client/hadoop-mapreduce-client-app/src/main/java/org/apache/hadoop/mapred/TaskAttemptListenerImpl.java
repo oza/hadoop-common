@@ -71,7 +71,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   private static final JvmTask TASK_FOR_INVALID_JVM = new JvmTask(null, true);
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptListenerImpl.class);
-  private ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
+  private ConcurrentMap<String, Boolean> aggregatorMap;
 
   private AppContext context;
   private Server server;
@@ -92,7 +92,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     this.jobTokenSecretManager = jobTokenSecretManager;
   }
   
-  public void registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map) {
+  public void registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
     aggregatorMap = map;
   }
 
@@ -263,8 +263,9 @@ public class TaskAttemptListenerImpl extends CompositeService
     LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag()
         + "," + aggregator.getId() + "," + aggregator.getTaskID());
     boolean canStart = false;
-    if (aggregatorMap.containsKey(aggregator)) {
-      canStart = aggregatorMap.get(aggregator) ;
+    if (aggregatorMap.containsKey(aggregator.getTaskID().toString())) {
+      canStart = aggregatorMap.get(aggregator.getTaskID().toString()) ;
+      LOG.info("[MR-4502] canStart is" + canStart);
     }
     return canStart;
   }
