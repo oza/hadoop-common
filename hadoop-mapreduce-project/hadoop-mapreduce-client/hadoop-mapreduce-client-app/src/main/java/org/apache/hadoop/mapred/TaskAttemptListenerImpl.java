@@ -262,7 +262,11 @@ public class TaskAttemptListenerImpl extends CompositeService
     // TODO: XXX implement this code.
     LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag()
         + "," + aggregator.getId() + "," + aggregator.getTaskID());
-    return false;
+    boolean canStart = false;
+    if (aggregatorMap.containsKey(aggregator)) {
+      canStart = aggregatorMap.get(aggregator) ;
+    }
+    return canStart;
   }
 
 

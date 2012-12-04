@@ -1151,6 +1151,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.clock, job.completedTasksFromPreviousRun, 
                 job.applicationAttemptId.getAttemptId(),
                 job.metrics, job.appContext);
+        task.registerAggregatorMap(job.aggregatorMap);
         job.addTask(task);
       }
       LOG.info("Input size for job " + job.jobId + " = " + inputLength

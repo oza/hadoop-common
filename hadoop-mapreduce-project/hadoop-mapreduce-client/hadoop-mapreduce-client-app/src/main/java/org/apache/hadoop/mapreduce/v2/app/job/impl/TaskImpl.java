@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -245,6 +246,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private int failedAttempts;
   private int finishedAttempts;//finish are total of success, failed and killed
 
+  protected ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
+
   @Override
   public TaskState getState() {
     return stateMachine.getCurrentState();
@@ -315,6 +318,11 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
     stateMachine = stateMachineFactory.make(this);
+  }
+  
+  public TaskImpl registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map){ 
+    aggregatorMap = map;
+    return this;
   }
 
   @Override

@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
@@ -60,7 +61,7 @@ public class MapTaskImpl extends TaskImpl {
     this.taskSplitMetaInfo = taskSplitMetaInfo;
     this.aggregationWaitMap = aggregationWaitMap;
   }
-
+  
   @Override
   protected int getMaxAttempts() {
     return conf.getInt(MRJobConfig.MAP_MAX_ATTEMPTS, 4);
@@ -72,7 +73,7 @@ public class MapTaskImpl extends TaskImpl {
         eventHandler, jobFile,
         partition, taskSplitMetaInfo, conf, taskAttemptListener,
         committer, jobToken, credentials, clock, aggregationWaitMap,
-        appContext);
+        appContext).registerAggregatorMap(aggregatorMap);
   }
 
   @Override

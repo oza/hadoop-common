@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -486,6 +487,7 @@ public abstract class TaskAttemptImpl implements
   private TaskAttemptStatus reportedStatus;
   private final int aggregationThreshold;
   private boolean isAggregationEnabled;
+  private ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
   
   private static final String LINE_SEPARATOR = System
       .getProperty("line.separator");
@@ -1209,6 +1211,15 @@ public abstract class TaskAttemptImpl implements
     }
     return result;
   }
+  
+  public TaskAttemptImpl registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map) {
+    aggregatorMap = map;
+    return this;
+  }
+  
+  public ConcurrentMap<TaskAttemptId, Boolean> getAggregatorMap() {
+    return aggregatorMap;
+  }
 
   private static final Pattern ipPattern = // Pattern for matching ip
     Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
@@ -1238,8 +1249,13 @@ public abstract class TaskAttemptImpl implements
       if (taskAttempt.isAggregationEnabled && 
           taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
         if (taskAttempt.shouldBeAggregator()) {
+          // TODO: remove setAggregationMode.
           taskAttempt.getID().setAggregationMode(true);
+          taskAttempt.getAggregatorMap().put(taskAttempt.getID(), true);
+        } else {
+          taskAttempt.getAggregatorMap().put(taskAttempt.getID(), false);
         }
+          
       }
       
       // this is a _real_ Task (classic Hadoop mapred flavor):
