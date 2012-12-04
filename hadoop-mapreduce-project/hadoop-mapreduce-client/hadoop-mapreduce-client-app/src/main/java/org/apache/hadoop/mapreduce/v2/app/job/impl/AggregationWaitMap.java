@@ -55,16 +55,16 @@ public class AggregationWaitMap {
   public boolean containsKey(String hostname) {
     readLock.lock();
     try {
-      return aggregationWaitMap.contains(hostname);
+      return aggregationWaitMap.containsKey(hostname);
     } finally {
       readLock.unlock();
     }
   }
   
-  public void put(String hostname, ArrayList<TaskAttemptCompletionEvent> event) {
+  public void put(String hostname, ArrayList<TaskAttemptCompletionEvent> events) {
     writeLock.lock();
     try {
-      aggregationWaitMap.put(hostname, event);
+      aggregationWaitMap.put(hostname, events);
     } finally {
       writeLock.unlock();
     }
