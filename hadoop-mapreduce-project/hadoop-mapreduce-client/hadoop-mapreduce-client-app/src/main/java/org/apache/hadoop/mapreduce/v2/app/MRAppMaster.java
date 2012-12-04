@@ -183,8 +183,8 @@ public class MRAppMaster extends CompositeService {
 
   private volatile boolean isLastAMRetry = false;
   // MR-4502
-  private final ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap =
-      new ConcurrentHashMap<TaskAttemptId, Boolean>();
+  private final ConcurrentMap<String, Boolean> aggregatorMap =
+      new ConcurrentHashMap<String, Boolean>();
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,

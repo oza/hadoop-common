@@ -416,7 +416,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private JobTokenSecretManager jobTokenSecretManager;
 
   private final boolean isAggregationEnabled;
-  private ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
+  private ConcurrentMap<String, Boolean> aggregatorMap;
   
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
@@ -488,7 +488,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return this.numMapTasks;
   }
   
-  public JobImpl registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map) {
+  public JobImpl registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
     aggregatorMap = map;
     return this;
   }

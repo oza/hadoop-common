@@ -499,7 +499,7 @@ public abstract class TaskAttemptImpl implements
   private TaskAttemptStatus reportedStatus;
   private final int aggregationThreshold;
   private boolean isAggregationEnabled;
-  private ConcurrentMap<TaskAttemptId, Boolean> aggregatorMap;
+  private ConcurrentMap<String, Boolean> aggregatorMap;
   
   private static final String LINE_SEPARATOR = System
       .getProperty("line.separator");
@@ -1261,12 +1261,12 @@ public abstract class TaskAttemptImpl implements
     return result;
   }
   
-  public TaskAttemptImpl registerAggregatorMap(ConcurrentMap<TaskAttemptId, Boolean> map) {
+  public TaskAttemptImpl registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
     aggregatorMap = map;
     return this;
   }
   
-  public ConcurrentMap<TaskAttemptId, Boolean> getAggregatorMap() {
+  public ConcurrentMap<String, Boolean> getAggregatorMap() {
     return aggregatorMap;
   }
 
@@ -1300,10 +1300,12 @@ public abstract class TaskAttemptImpl implements
           taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
         if (taskAttempt.shouldBeAggregator()) {
           // TODO: remove setAggregationMode.
+          LOG.info("[MR-4502]Aggregator ID is" + taskAttempt.getID());
           taskAttempt.getID().setAggregationMode(true);
-          taskAttempt.getAggregatorMap().put(taskAttempt.getID(), true);
+          taskAttempt.getAggregatorMap().put(taskAttempt.getID().toString(), true);
         } else {
-          taskAttempt.getAggregatorMap().put(taskAttempt.getID(), false);
+          LOG.info("[MR-4502] non Aggregator ID is" + taskAttempt.getID());
+          taskAttempt.getAggregatorMap().put(taskAttempt.getID().toString(), false);
         }
           
       }
