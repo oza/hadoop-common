@@ -275,9 +275,15 @@ public class TaskAttemptListenerImpl extends CompositeService
           TaskAttemptID attemptID = TypeConverter.fromYarn(ev.getAttemptId());
           aggregationTargets.add(attemptID);
         }
-      } 
+      } else {
+        // Dummy
+        aggregationTargets.add(aggregator);
+      }
         
       LOG.info("[MR-4502] target size is " + aggregationTargets.size());
+    } else {
+     // Dummy
+     aggregationTargets.add(aggregator);
     }
     
     return aggregationTargets;
