@@ -1420,6 +1420,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // put success events into successAttemptCompletionEventNoMap.
         if (job.isAggregationEnabled) {
           if (attemptId.isAggregating()) {
+            LOG.info("[MR-4502] Aggregator succeeded to local aggregation.");
             String hostname = tce.getMapOutputServerAddress();
             List<TaskAttemptCompletionEvent>events;
             ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap =
@@ -1440,6 +1441,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             String hostname = tce.getMapOutputServerAddress();
             if (job.shouldWaitForAggregation()) {
               // wait until finishing aggregation.
+              LOG.info("[MR-4502] " + attemptId.getId() + "is waiting for aggregation.");
               job.aggregationWaitMap.put(hostname, tce);
             } else {
               // This is final phase of map.
@@ -1450,6 +1452,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   job.taskAttemptCompletionEvents.add(ev);
                 }
               }
+              LOG.info("[MR-4502] At " + attemptId.getId() + ", MRAppMaster decided to stop aggregation.");
               job.aggregationWaitMap.clear();
             }
           }
