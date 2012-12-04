@@ -143,7 +143,7 @@ public class TestMapProgress extends TestCase {
     }
 
     @Override
-    public List<TaskAttemptID> getAggregationTargets(TaskAttemptID aggregator)
+    public AggregationTarget getAggregationTargets(TaskAttemptID aggregator)
         throws IOException {
       // TODO Auto-generated method stub
       return null;

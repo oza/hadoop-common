@@ -337,8 +337,9 @@ class MapTask extends Task {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
     
-    List<TaskAttemptID> aggregationTargets = umbilical.getAggregationTargets(getTaskID());
-    if (aggregationTargets.size() > 1) {
+    TaskAttemptID[] aggregationTargets = umbilical.getAggregationTargets(getTaskID()).getAggregationTargets();
+    
+    if (aggregationTargets.length > 1) {
       // Start to aggregation.
       //runAggregation(job, umbilical, reporter);
       LOG.info("[MR-4502]: I'm aggregator! ID is :" + getTaskID());

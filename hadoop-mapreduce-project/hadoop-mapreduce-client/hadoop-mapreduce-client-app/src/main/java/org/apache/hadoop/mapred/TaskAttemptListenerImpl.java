@@ -259,7 +259,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public List<TaskAttemptID> getAggregationTargets(TaskAttemptID aggregator) throws IOException {
+  public AggregationTarget getAggregationTargets(TaskAttemptID aggregator) throws IOException {
     // TODO: XXX implement this code.
     LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag()
         + "," + aggregator.getId() + "," + aggregator.getTaskID());
@@ -286,7 +286,8 @@ public class TaskAttemptListenerImpl extends CompositeService
      aggregationTargets.add(aggregator);
     }
     
-    return aggregationTargets;
+    TaskAttemptID[] attempts = new TaskAttemptID[aggregationTargets.size()];
+    return new AggregationTarget(attempts);
   }
 
 
