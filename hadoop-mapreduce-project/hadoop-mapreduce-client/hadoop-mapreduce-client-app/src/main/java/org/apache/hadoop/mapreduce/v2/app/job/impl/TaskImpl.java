@@ -246,7 +246,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private int failedAttempts;
   private int finishedAttempts;//finish are total of success, failed and killed
 
-  protected ConcurrentMap<String, Boolean> aggregatorMap;
+  protected ConcurrentMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap;
 
   @Override
   public TaskState getState() {
@@ -320,7 +320,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     stateMachine = stateMachineFactory.make(this);
   }
   
-  public TaskImpl registerAggregatorMap(ConcurrentMap<String, Boolean> map){ 
+  public TaskImpl registerAggregatorMap(ConcurrentMap<String, List<TaskAttemptCompletionEvent>> map){ 
     aggregatorMap = map;
     return this;
   }

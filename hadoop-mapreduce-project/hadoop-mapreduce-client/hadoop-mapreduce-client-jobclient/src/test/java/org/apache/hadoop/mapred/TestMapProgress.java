@@ -143,9 +143,12 @@ public class TestMapProgress extends TestCase {
     }
 
     @Override
-    public boolean canStartLocalAggregation(TaskAttemptID aggregator) throws IOException {
-      return true;
+    public List<TaskAttemptID> getAggregationTargets(TaskAttemptID aggregator)
+        throws IOException {
+      // TODO Auto-generated method stub
+      return null;
     }
+
   }
   
   private FileSystem fs = null;

@@ -488,7 +488,7 @@ public abstract class TaskAttemptImpl implements
   private TaskAttemptStatus reportedStatus;
   private final int aggregationThreshold;
   private boolean isAggregationEnabled;
-  private ConcurrentMap<String, Boolean> aggregatorMap;
+  private ConcurrentMap<String,List<TaskAttemptCompletionEvent>> aggregatorMap;
   
   private static final String LINE_SEPARATOR = System
       .getProperty("line.separator");
@@ -1213,12 +1213,12 @@ public abstract class TaskAttemptImpl implements
     return result;
   }
   
-  public TaskAttemptImpl registerAggregatorMap(ConcurrentMap<String, Boolean> map) {
+  public TaskAttemptImpl registerAggregatorMap(ConcurrentMap<String, List<TaskAttemptCompletionEvent>> map) {
     aggregatorMap = map;
     return this;
   }
   
-  public ConcurrentMap<String, Boolean> getAggregatorMap() {
+  public ConcurrentMap<String, List<TaskAttemptCompletionEvent>> getAggregatorMap() {
     return aggregatorMap;
   }
 
@@ -1253,10 +1253,9 @@ public abstract class TaskAttemptImpl implements
           // TODO: remove setAggregationMode.
           LOG.info("[MR-4502]Aggregator ID is" + taskAttempt.getID());
           taskAttempt.getID().setAggregationMode(true);
-          taskAttempt.getAggregatorMap().put(taskAttempt.getID().toString(), true);
         } else {
           LOG.info("[MR-4502] non Aggregator ID is" + taskAttempt.getID());
-          taskAttempt.getAggregatorMap().put(taskAttempt.getID().toString(), false);
+          taskAttempt.getID().setAggregationMode(false);
         }
           
       }
@@ -1544,18 +1543,18 @@ public abstract class TaskAttemptImpl implements
     
     // FIXME: A bit dangerous.
     hostname = this.nodeHttpAddress.split(":")[0];
-    ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap
-      = this.getID().getAggregatingTargets();
     LOG.info("[MR-4502] hostname: " + hostname);
     LOG.info("[MR-4502] check aggregationWaitMap :" + aggregationWaitMap.containsKey(hostname));
     if (aggregationWaitMap.containsKey(hostname)) {
       ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
       LOG.info("[MR-4502]" + " hostname is " + hostname + "list size is:" + list.size());
       if (list != null && (list.size() > aggregationThreshold)) {
-        if (!localMap.containsKey(hostname)) {
+        if (!aggregatorMap.containsKey(hostname)) {
           ArrayList<TaskAttemptCompletionEvent> events = aggregationWaitMap.get(hostname);
-          localMap.put(hostname, events);
+          String taskId = getID().getTaskId().toString();
+          aggregatorMap.put(taskId, events);
           aggregationWaitMap.remove(hostname);
+          LOG.info("[MR-4502] taskId: " + taskId + ", hostname: " + hostname);
         }
       }
     }

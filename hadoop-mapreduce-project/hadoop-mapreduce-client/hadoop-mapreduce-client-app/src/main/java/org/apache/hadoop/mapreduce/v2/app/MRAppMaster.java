@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -174,8 +175,8 @@ public class MRAppMaster extends CompositeService {
 
   private volatile boolean isLastAMRetry = false;
   // MR-4502
-  private final ConcurrentMap<String, Boolean> aggregatorMap =
-      new ConcurrentHashMap<String, Boolean>();
+  private final ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap =
+      new ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>>();
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
