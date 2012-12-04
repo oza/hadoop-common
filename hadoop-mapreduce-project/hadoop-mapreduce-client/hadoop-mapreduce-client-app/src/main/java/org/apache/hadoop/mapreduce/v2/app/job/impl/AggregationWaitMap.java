@@ -39,7 +39,7 @@ public class AggregationWaitMap {
   public void put(String hostname, TaskAttemptCompletionEvent ev) {
     writeLock.lock();
     try {
-      if (aggregationWaitMap.contains(hostname)) {
+      if (aggregationWaitMap.containsKey(hostname)) {
         ArrayList<TaskAttemptCompletionEvent> ary = aggregationWaitMap.get(hostname);
         ary.add(ev);
       } else {
@@ -52,7 +52,7 @@ public class AggregationWaitMap {
     }
   }
   
-  public boolean contains(String hostname) {
+  public boolean containsKey(String hostname) {
     readLock.lock();
     try {
       return aggregationWaitMap.contains(hostname);
@@ -100,4 +100,16 @@ public class AggregationWaitMap {
       writeLock.unlock();
     }
   }
+
+  public void remove(String hostname) {
+    writeLock.lock();
+    try {
+      if (aggregationWaitMap.containsKey(hostname)) {
+        aggregationWaitMap.remove(hostname);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
 }

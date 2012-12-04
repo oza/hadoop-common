@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.concurrent.ConcurrentHashMap;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -1576,6 +1577,11 @@ public abstract class TaskAttemptImpl implements
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
     }
   }
+  
+  public ArrayList<TaskAttemptCompletionEvent> getAggregationTargets() {
+    String hostname = this.nodeHttpAddress;
+    return aggregationWaitMap.get(hostname);
+  }
 
   public boolean shouldBeAggregator() {
     String hostname;
@@ -1588,13 +1594,18 @@ public abstract class TaskAttemptImpl implements
     }
     
     hostname = this.nodeHttpAddress;
-    if (aggregationWaitMap.contains(hostname)) {
+    ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap
+      = this.getID().getAggregatingTargets();
+    if (aggregationWaitMap.containsKey(hostname)) {
       ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
       if (list != null && (list.size() > aggregationThreshold)) {
-        shouldBeAggregator = true;
+        if (!localMap.containsKey(hostname)) {
+          ArrayList<TaskAttemptCompletionEvent> events = aggregationWaitMap.get(hostname);
+          localMap.put(hostname, events);
+          aggregationWaitMap.remove(hostname);
+        }
       }
     }
-
     return shouldBeAggregator;
   }
 

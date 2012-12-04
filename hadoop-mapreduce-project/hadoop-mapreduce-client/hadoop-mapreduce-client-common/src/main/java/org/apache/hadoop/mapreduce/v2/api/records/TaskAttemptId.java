@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records;
 
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -50,7 +52,10 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
 
   protected static final String TASKATTEMPT = "attempt";
   
+  // TODO: lazy 
   protected final AtomicBoolean isAggregating = new AtomicBoolean(false);
+  protected final ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localAggregatingTargets
+    = new ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>>();
   
   @Override
   public int hashCode() {
@@ -112,6 +117,10 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
 
   public boolean isAggregating() {
     return isAggregating.get();
+  }
+  
+  public ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> getAggregatingTargets() {
+    return localAggregatingTargets;
   }
   
 }

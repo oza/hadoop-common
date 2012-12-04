@@ -1422,12 +1422,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           if (attemptId.isAggregating()) {
             String hostname = tce.getMapOutputServerAddress();
             List<TaskAttemptCompletionEvent>events;
-            
-            if (job.aggregationWaitMap.contains(hostname)) {
-              events = job.aggregationWaitMap.get(hostname);
+            ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> localMap =
+                attemptId.getAggregatingTargets();
+                
+            if (localMap.containsKey(hostname)) {
+              events = localMap.get(hostname);
               // MAPREDUCE-4902
               if (events != null && events.size() > 0) {
                 for (TaskAttemptCompletionEvent ev:events) {
+                  // stop to fetch.
                   ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
                   job.taskAttemptCompletionEvents.add(ev);
                 }
