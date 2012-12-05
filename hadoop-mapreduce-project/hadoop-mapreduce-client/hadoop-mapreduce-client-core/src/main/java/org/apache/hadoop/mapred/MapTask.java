@@ -1475,7 +1475,7 @@ class MapTask extends Task {
       String basePath = job.get(MRConfig.LOCAL_DIR);
       LOG.info("[MR-4502]: I'm aggregator! Start to aggregatte local IFiles." +
       		"LOCAL_DIR is :" + basePath);
-      File[] files = createFilesFromTaskAttempts(basePath, aggregationTargets);
+      File[] files = createInputFilesFromTaskAttempts(basePath, aggregationTargets);
       long finalOutFileSize = 0;
       int finalIndexFileSize = partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH;
       FSDataOutputStream finalOut = null;
@@ -1498,22 +1498,22 @@ class MapTask extends Task {
         List<Segment<K,V>> segmentList =
         new ArrayList<Segment<K, V>>(files.length);
         for(int i = 0; i < files.length; i++) {
-        //IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
-        Path path = new Path(files[i].getAbsolutePath());
-        
-        Segment<K,V> s =
-        new Segment<K,V>(job, rfs, path, codec, true);
-        segmentList.add(i, s);
-        
-        /*
-        if (LOG.isDebugEnabled()) {
-        LOG.debug("MapId=" + mapId + " Reducer=" + parts +
-        "Spill =" + i + "(" + indexRecord.startOffset + "," +
-        indexRecord.rawLength + ", " + indexRecord.partLength + ")");
+          //IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
+          Path path = new Path(files[i].getAbsolutePath());
+
+          Segment<K,V> s =
+              new Segment<K,V>(job, rfs, path, codec, true);
+          segmentList.add(i, s);
+
+          /*
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("MapId=" + mapId + " Reducer=" + parts +
+            "Spill =" + i + "(" + indexRecord.startOffset + "," +
+            indexRecord.rawLength + ", " + indexRecord.partLength + ")");
+          }
+           */
         }
-        */
-        }
-        
+
         int mergeFactor = job.getInt(JobContext.IO_SORT_FACTOR, 100);
         // sort the segments only if there are intermediate merges
         boolean sortSegments = segmentList.size() > mergeFactor;
@@ -1564,14 +1564,14 @@ class MapTask extends Task {
       
     }
 
-    private File[] createFilesFromTaskAttempts(String basePath,
+    private File[] createInputFilesFromTaskAttempts(String basePath,
         TaskAttemptID[] aggregationTargets) {
       final String outputDirName = basePath + Path.SEPARATOR + "output" + Path.SEPARATOR;
       File[] files = new File[aggregationTargets.length];
       int i = 0;
       
       for (TaskAttemptID attemptID : aggregationTargets) {
-        files[i] = new File(outputDirName + attemptID.toString());
+        files[i] = new File(outputDirName + attemptID.toString() + MapOutputFile.MAP_OUTPUT_FILENAME_STRING);
         i++;
       }
       
