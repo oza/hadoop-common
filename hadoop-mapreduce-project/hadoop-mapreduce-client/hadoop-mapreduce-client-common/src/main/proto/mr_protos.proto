@@ -51,6 +51,7 @@ enum TaskStateProto {
   TS_SUCCEEDED = 4;
   TS_FAILED = 5;
   TS_KILLED = 6;
+  TS_AGGREGATED = 7;
 }
 
 enum PhaseProto {
