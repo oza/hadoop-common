@@ -1394,27 +1394,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       // eventId is equal to index in the ArrayList
       tce.setEventId(job.taskAttemptCompletionEvents.size());
       job.taskAttemptCompletionEvents.add(tce);
-      if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
-        job.mapAttemptCompletionEvents.add(tce);
-      }
-      
       TaskAttemptId attemptId = tce.getAttemptId();
-
       TaskId taskId = attemptId.getTaskId();
-      //make the previous completion event as obsolete if it exists
-      Object successEventNo = 
-        job.successAttemptCompletionEventNoMap.remove(taskId);
-      if (successEventNo != null) {
-        TaskAttemptCompletionEvent successEvent = 
-          job.taskAttemptCompletionEvents.get((Integer) successEventNo);
-        successEvent.setStatus(TaskAttemptCompletionEventStatus.OBSOLETE);
-      }
       
-      // if this attempt is not successful then why is the previous successful 
-      // attempt being removed above - MAPREDUCE-4330
-      if (TaskAttemptCompletionEventStatus.SUCCEEDED.equals(tce.getStatus())) {
-        job.successAttemptCompletionEventNoMap.put(taskId, tce.getEventId());
-        
+      if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
+        // job.mapAttemptCompletionEvents.add(tce);
         // MAPREDUCE-4902
         // if the succeeded attemptId is aggregation leader, 
         // put success events into successAttemptCompletionEventNoMap.
@@ -1463,6 +1447,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             }
           }
         }
+      }
+
+      //make the previous completion event as obsolete if it exists
+      Object successEventNo = 
+        job.successAttemptCompletionEventNoMap.remove(taskId);
+      if (successEventNo != null) {
+        TaskAttemptCompletionEvent successEvent = 
+          job.taskAttemptCompletionEvents.get((Integer) successEventNo);
+        successEvent.setStatus(TaskAttemptCompletionEventStatus.OBSOLETE);
+      }
+      
+      // if this attempt is not successful then why is the previous successful 
+      // attempt being removed above - MAPREDUCE-4330
+      if (TaskAttemptCompletionEventStatus.SUCCEEDED.equals(tce.getStatus())) {
+        job.successAttemptCompletionEventNoMap.put(taskId, tce.getEventId());
         
         // here we could have simply called Task.getSuccessfulAttempt() but
         // the event that triggers this code is sent before
