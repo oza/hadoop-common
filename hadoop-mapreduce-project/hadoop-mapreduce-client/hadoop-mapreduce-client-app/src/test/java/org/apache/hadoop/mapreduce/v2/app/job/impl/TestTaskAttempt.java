@@ -580,7 +580,8 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, mock(OutputCommitter.class),
-        mock(Token.class), new Credentials(), new SystemClock(), appCtx);
+        mock(Token.class), new Credentials(), new SystemClock(), 
+        new AggregationWaitMap(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
@@ -630,7 +631,8 @@ public class TestTaskAttempt{
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, mock(OutputCommitter.class),
-        mock(Token.class), new Credentials(), new SystemClock(), appCtx);
+        mock(Token.class), new Credentials(), new SystemClock(), 
+        new AggregationWaitMap(), appCtx);
 
     NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);

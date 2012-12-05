@@ -262,20 +262,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private static final RecoverdAttemptsComparator RECOVERED_ATTEMPTS_COMPARATOR =
       new RecoverdAttemptsComparator();
 
-<<<<<<< HEAD
-=======
-  //should be set to one which comes first
-  //saying COMMIT_PENDING
-  private TaskAttemptId commitAttempt;
-
-  private TaskAttemptId successfulAttempt;
-
-  private int failedAttempts;
-  private int finishedAttempts;//finish are total of success, failed and killed
-
   protected ConcurrentMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap;
 
->>>>>>> Fixed to pass aggregatorMap against TaskAttemptImpl
   @Override
   public TaskState getState() {
     readLock.lock();
