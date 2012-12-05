@@ -1606,6 +1606,7 @@ public abstract class TaskAttemptImpl implements
           aggregatorMap.put(taskId, events);
           aggregationWaitMap.remove(hostname);
           LOG.info("[MR-4502] taskId: " + taskId + ", hostname: " + hostname);
+          shouldBeAggregator = true;
         }
       }
     }
