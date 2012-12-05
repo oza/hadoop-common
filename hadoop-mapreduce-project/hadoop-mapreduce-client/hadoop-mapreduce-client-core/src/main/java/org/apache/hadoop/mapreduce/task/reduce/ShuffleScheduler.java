@@ -148,6 +148,7 @@ class ShuffleScheduler<K,V> {
     }
   }
   
+  
   private void updateStatus() {
     float mbs = (float) totalBytesShuffledTillNow / (1024 * 1024);
     int mapsDone = totalMaps - remainingMaps;
@@ -274,6 +275,14 @@ class ShuffleScheduler<K,V> {
       updateStatus();
     }
   }
+  
+  public synchronized void skip(TaskID taskId) {
+    finishedMaps[taskId.getId()] = true;
+    if (--remainingMaps == 0) {
+      notifyAll();
+    }
+    updateStatus();
+  }  
   
   public synchronized void addKnownMapOutput(String hostName, 
                                              String hostUrl,
