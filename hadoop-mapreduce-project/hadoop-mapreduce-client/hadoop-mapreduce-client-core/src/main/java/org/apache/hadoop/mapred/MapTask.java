@@ -1484,71 +1484,62 @@ class MapTask extends Task {
         Path finalIndexFile =
           mapOutputFile.getOutputIndexFileForWrite(finalIndexFileSize);
         Path finalOutputFile =
-          mapOutputFile.getOutputFileForWrite(finalOutFileSize);
+            mapOutputFile.getOutputFileForWrite(finalOutFileSize);
         finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
         finalOut = rfs.create(finalOutputFile, true, 4096);
-        
+
         sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
         Merger.considerFinalMergeForProgress();
-        
+
         IndexRecord rec = new IndexRecord();
         final SpillRecord spillRec = new SpillRecord(partitions);
         for (int parts = 0; parts < partitions; parts++) {
-        //create the segments to be merged
-        List<Segment<K,V>> segmentList =
-        new ArrayList<Segment<K, V>>(files.length);
-        for(int i = 0; i < files.length; i++) {
-          //IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
-          Path path = new Path(files[i].getAbsolutePath());
+          //create the segments to be merged
+          List<Segment<K,V>> segmentList =
+              new ArrayList<Segment<K, V>>(files.length);
+          for(int i = 0; i < files.length; i++) {
+            //IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
+            Path path = new Path(files[i].getAbsolutePath());
 
-          Segment<K,V> s =
-              new Segment<K,V>(job, rfs, path, codec, true);
-          segmentList.add(i, s);
-
-          /*
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("MapId=" + mapId + " Reducer=" + parts +
-            "Spill =" + i + "(" + indexRecord.startOffset + "," +
-            indexRecord.rawLength + ", " + indexRecord.partLength + ")");
+            Segment<K,V> s =
+                new Segment<K,V>(job, rfs, path, codec, true);
+            segmentList.add(i, s);
           }
-           */
-        }
 
-        int mergeFactor = job.getInt(JobContext.IO_SORT_FACTOR, 100);
-        // sort the segments only if there are intermediate merges
-        boolean sortSegments = segmentList.size() > mergeFactor;
-        final TaskAttemptID mapId = getTaskID();
-        //merge
-        @SuppressWarnings("unchecked")
-        RawKeyValueIterator kvIter = Merger.merge(job, rfs,
-        keyClass, valClass, codec,
-        segmentList, mergeFactor,
-        new Path(mapId.toString()),
-        job.getOutputKeyComparator(), reporter, sortSegments,
-        null, spilledRecordsCounter, sortPhase.phase());
-        
-        //write merged output to disk
-        long segmentStart = finalOut.getPos();
-        Writer<K, V> writer =
-            new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
-                spilledRecordsCounter);
-        if (combinerRunner == null) {
+          int mergeFactor = job.getInt(JobContext.IO_SORT_FACTOR, 100);
+          // sort the segments only if there are intermediate merges
+          boolean sortSegments = segmentList.size() > mergeFactor;
+          final TaskAttemptID mapId = getTaskID();
+          //merge
+          @SuppressWarnings("unchecked")
+          RawKeyValueIterator kvIter = Merger.merge(job, rfs,
+              keyClass, valClass, codec,
+              segmentList, mergeFactor,
+              new Path(mapId.toString()),
+              job.getOutputKeyComparator(), reporter, sortSegments,
+              null, spilledRecordsCounter, sortPhase.phase());
 
-          Merger.writeFile(kvIter, writer, reporter, job);
-        } else {
-          combineCollector.setWriter(writer);
-          combinerRunner.combine(kvIter, combineCollector);
-        }
+          //write merged output to disk
+          long segmentStart = finalOut.getPos();
+          Writer<K, V> writer =
+              new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
+                  spilledRecordsCounter);
+          if (combinerRunner == null) {
+            Merger.writeFile(kvIter, writer, reporter, job);
+          } else {
+            combineCollector.setWriter(writer);
+            combinerRunner.combine(kvIter, combineCollector);
+          }
 
-        //close
-        writer.close();
-        sortPhase.startNextPhase();
+          //close
+          writer.close();
+          sortPhase.startNextPhase();
 
-        // record offsets
-        rec.startOffset = segmentStart;
-        rec.rawLength = writer.getRawLength();
-        rec.partLength = writer.getCompressedLength();
-        spillRec.putIndex(rec, parts);
+          // record offsets
+          rec.startOffset = segmentStart;
+          rec.rawLength = writer.getRawLength();
+          rec.partLength = writer.getCompressedLength();
+          spillRec.putIndex(rec, parts);
         }
         spillRec.writeToFile(finalIndexFile, job);
         finalOut.close();
@@ -1561,7 +1552,7 @@ class MapTask extends Task {
         // TODO Implement this method!
         LOG.error(e.toString());
       }
-      
+
     }
 
     private File[] createInputFilesFromTaskAttempts(String basePath,
