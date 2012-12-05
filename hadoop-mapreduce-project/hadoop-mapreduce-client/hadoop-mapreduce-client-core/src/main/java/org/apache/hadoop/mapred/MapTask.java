@@ -1571,7 +1571,8 @@ class MapTask extends Task {
       int i = 0;
       
       for (TaskAttemptID attemptID : aggregationTargets) {
-        files[i] = new File(outputDirName + attemptID.toString() + MapOutputFile.MAP_OUTPUT_FILENAME_STRING);
+        files[i] = new File(outputDirName + attemptID.toString() +
+            Path.SEPARATOR + MapOutputFile.MAP_OUTPUT_FILENAME_STRING);
         i++;
       }
       
