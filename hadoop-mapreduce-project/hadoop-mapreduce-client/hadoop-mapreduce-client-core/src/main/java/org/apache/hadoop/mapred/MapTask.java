@@ -1457,14 +1457,14 @@ class MapTask extends Task {
       }
       // release sort buffer before the merge
       kvbuffer = null;
-      mergeParts();
+      boolean needToExit = mergeParts();
       Path outputPath = mapOutputFile.getOutputFile();
       fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
       
       // MR-4502: Start node-level Aggregation.
       TaskAttemptID[] aggregationTargets = umbilical.getAggregationTargets(getTaskID()).getAggregationTargets();
       
-      if (aggregationTargets.length > 1) {
+      if (!needToExit && aggregationTargets.length > 1) {
         // Start to aggregation.
         runAggregation(aggregationTargets);
       } else {
@@ -1548,9 +1548,6 @@ class MapTask extends Task {
         finalOut.close();
         sortPhase.complete();
 
-        for(int i = 0; i < files.length; i++) {
-          rfs.delete(new Path(files[i].getAbsoluteFile().toString()),true);
-        }
       } catch(Exception e) {
         // TODO Implement this method!
         LOG.error(e.toString());
@@ -1869,7 +1866,7 @@ class MapTask extends Task {
       public void close() { }
     }
 
-    private void mergeParts() throws IOException, InterruptedException, 
+    private boolean mergeParts() throws IOException, InterruptedException, 
                                      ClassNotFoundException {
       // get the approximate size of the final output/index files
       long finalOutFileSize = 0;
@@ -1892,7 +1889,7 @@ class MapTask extends Task {
             mapOutputFile.getOutputIndexFileForWriteInVolume(filename[0]), job);
         }
         sortPhase.complete();
-        return;
+        return true;
       }
 
       // read in paged indices
@@ -1933,7 +1930,7 @@ class MapTask extends Task {
           finalOut.close();
         }
         sortPhase.complete();
-        return;
+        return true;
       }
       {
         sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
@@ -2001,6 +1998,7 @@ class MapTask extends Task {
           rfs.delete(filename[i],true);
         }
       }
+      return false;
     }
     
     /**
