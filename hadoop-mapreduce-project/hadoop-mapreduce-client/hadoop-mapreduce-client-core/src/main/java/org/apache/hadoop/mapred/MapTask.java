@@ -54,6 +54,7 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -336,35 +337,10 @@ class MapTask extends Task {
     } else {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
-    
-    TaskAttemptID[] aggregationTargets = umbilical.getAggregationTargets(getTaskID()).getAggregationTargets();
-    
-    if (aggregationTargets.length > 1) {
-      // Start to aggregation.
-      //runAggregation(job, umbilical, reporter);
-      LOG.info("[MR-4502]: I'm aggregator! ID is :" + getTaskID());
-    } else {
-      LOG.info("[MR-4502]: I'm NOT aggregator... ID is:" + getTaskID());
-    }
-    
+ 
     done(umbilical, reporter);
   }
-  
-  /*
-    boolean tryGetLocalAggregationLeader() {
-    
-      try {
-        String jobTempDir = conf.get(MRJobConfig.MAPREDUCE_JOB_DIR);
-        Path jobTempDirPath = new Path(jobTempDir);
-        FileSystem fs = jobTempDirPath.getFileSystem(conf);
-      } catch() {
-        // handle lock related Exception.
-        // must cleanup.
-      }
-      // 
-    }
-   */
-  
+
   /**
   void runAggregation(job, umbilical, reporter) {
     try {
@@ -1484,6 +1460,125 @@ class MapTask extends Task {
       mergeParts();
       Path outputPath = mapOutputFile.getOutputFile();
       fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
+      
+      // MR-4502: Start node-level Aggregation.
+      TaskAttemptID[] aggregationTargets = umbilical.getAggregationTargets(getTaskID()).getAggregationTargets();
+      
+      if (aggregationTargets.length > 1) {
+        // Start to aggregation.
+        runAggregation(aggregationTargets);
+      } else {
+        LOG.info("[MR-4502]: I'm NOT aggregator... ID is:" + getTaskID());
+      }
+      
+      
+    }
+    
+    private void runAggregation(TaskAttemptID[] aggregationTargets) {
+      String basePath = job.get(MRConfig.LOCAL_DIR);
+      LOG.info("[MR-4502]: I'm aggregator! Start to aggregatte local IFiles." +
+      		"LOCAL_DIR is :" + basePath);
+      File[] files = createFilesFromTaskAttempts(basePath, aggregationTargets);
+      long finalOutFileSize = 0;
+      int finalIndexFileSize = partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH;
+      FSDataOutputStream finalOut = null;
+      
+      try {
+        Path finalIndexFile =
+          mapOutputFile.getOutputIndexFileForWrite(finalIndexFileSize);
+        Path finalOutputFile =
+          mapOutputFile.getOutputFileForWrite(finalOutFileSize);
+        finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
+        finalOut = rfs.create(finalOutputFile, true, 4096);
+        
+        sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
+        Merger.considerFinalMergeForProgress();
+        
+        IndexRecord rec = new IndexRecord();
+        final SpillRecord spillRec = new SpillRecord(partitions);
+        for (int parts = 0; parts < partitions; parts++) {
+        //create the segments to be merged
+        List<Segment<K,V>> segmentList =
+        new ArrayList<Segment<K, V>>(files.length);
+        for(int i = 0; i < files.length; i++) {
+        //IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
+        Path path = new Path(files[i].getAbsolutePath());
+        
+        Segment<K,V> s =
+        new Segment<K,V>(job, rfs, path, codec, true);
+        segmentList.add(i, s);
+        
+        /*
+        if (LOG.isDebugEnabled()) {
+        LOG.debug("MapId=" + mapId + " Reducer=" + parts +
+        "Spill =" + i + "(" + indexRecord.startOffset + "," +
+        indexRecord.rawLength + ", " + indexRecord.partLength + ")");
+        }
+        */
+        }
+        
+        int mergeFactor = job.getInt(JobContext.IO_SORT_FACTOR, 100);
+        // sort the segments only if there are intermediate merges
+        boolean sortSegments = segmentList.size() > mergeFactor;
+        final TaskAttemptID mapId = getTaskID();
+        //merge
+        @SuppressWarnings("unchecked")
+        RawKeyValueIterator kvIter = Merger.merge(job, rfs,
+        keyClass, valClass, codec,
+        segmentList, mergeFactor,
+        new Path(mapId.toString()),
+        job.getOutputKeyComparator(), reporter, sortSegments,
+        null, spilledRecordsCounter, sortPhase.phase());
+        
+        //write merged output to disk
+        long segmentStart = finalOut.getPos();
+        Writer<K, V> writer =
+            new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
+                spilledRecordsCounter);
+        if (combinerRunner == null) {
+
+          Merger.writeFile(kvIter, writer, reporter, job);
+        } else {
+          combineCollector.setWriter(writer);
+          combinerRunner.combine(kvIter, combineCollector);
+        }
+
+        //close
+        writer.close();
+        sortPhase.startNextPhase();
+
+        // record offsets
+        rec.startOffset = segmentStart;
+        rec.rawLength = writer.getRawLength();
+        rec.partLength = writer.getCompressedLength();
+        spillRec.putIndex(rec, parts);
+        }
+        spillRec.writeToFile(finalIndexFile, job);
+        finalOut.close();
+        sortPhase.complete();
+
+        for(int i = 0; i < files.length; i++) {
+          rfs.delete(new Path(files[i].getAbsoluteFile().toString()),true);
+        }
+      } catch(Exception e) {
+        // TODO Implement this method!
+        LOG.error(e.toString());
+      }
+      
+    }
+
+    private File[] createFilesFromTaskAttempts(String basePath,
+        TaskAttemptID[] aggregationTargets) {
+      final String outputDirName = basePath + Path.SEPARATOR + "output" + Path.SEPARATOR;
+      File[] files = new File[aggregationTargets.length];
+      int i = 0;
+      
+      for (TaskAttemptID attemptID : aggregationTargets) {
+        files[i] = new File(outputDirName + attemptID.toString());
+        i++;
+      }
+      
+      return files;
     }
 
     public void close() { }
