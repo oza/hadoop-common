@@ -1388,6 +1388,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       SingleArcTransition<JobImpl, JobEvent> {
     @Override
     public void transition(JobImpl job, JobEvent event) {
+      boolean shouldDispatchMapCompletionEvent = true;
       TaskAttemptCompletionEvent tce = 
         ((JobTaskAttemptCompletedEvent) event).getCompletionEvent();
       // Add the TaskAttemptCompletionEvent
@@ -1396,9 +1397,22 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.taskAttemptCompletionEvents.add(tce);
       TaskAttemptId attemptId = tce.getAttemptId();
       TaskId taskId = attemptId.getTaskId();
+
+
+      //make the previous completion event as obsolete if it exists
+      Object successEventNo = 
+        job.successAttemptCompletionEventNoMap.remove(taskId);
+      if (successEventNo != null) {
+        TaskAttemptCompletionEvent successEvent = 
+          job.taskAttemptCompletionEvents.get((Integer) successEventNo);
+        successEvent.setStatus(TaskAttemptCompletionEventStatus.OBSOLETE);
+      }
       
-      if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
-        // job.mapAttemptCompletionEvents.add(tce);
+      // if this attempt is not successful then why is the previous successful 
+      // attempt being removed above - MAPREDUCE-4330
+      if (TaskAttemptCompletionEventStatus.SUCCEEDED.equals(tce.getStatus())) {
+        job.successAttemptCompletionEventNoMap.put(taskId, tce.getEventId());
+        
         // MAPREDUCE-4902
         // if the succeeded attemptId is aggregation leader, 
         // put success events into successAttemptCompletionEventNoMap.
@@ -1433,6 +1447,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             if (job.shouldWaitForAggregation()) {
               // wait until finishing aggregation.
               LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.hostname is :" + hostname);
+              shouldDispatchMapCompletionEvent = false;
               job.aggregationWaitMap.put(hostname, tce);
             } else {
               // This is final phase of map.
@@ -1449,21 +1464,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             }
           }
         }
-      }
-
-      //make the previous completion event as obsolete if it exists
-      Object successEventNo = 
-        job.successAttemptCompletionEventNoMap.remove(taskId);
-      if (successEventNo != null) {
-        TaskAttemptCompletionEvent successEvent = 
-          job.taskAttemptCompletionEvents.get((Integer) successEventNo);
-        successEvent.setStatus(TaskAttemptCompletionEventStatus.OBSOLETE);
-      }
-      
-      // if this attempt is not successful then why is the previous successful 
-      // attempt being removed above - MAPREDUCE-4330
-      if (TaskAttemptCompletionEventStatus.SUCCEEDED.equals(tce.getStatus())) {
-        job.successAttemptCompletionEventNoMap.put(taskId, tce.getEventId());
         
         // here we could have simply called Task.getSuccessfulAttempt() but
         // the event that triggers this code is sent before
@@ -1480,6 +1480,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           job.nodesToSucceededTaskAttempts.put(nodeId, taskAttemptIdList);
         }
         taskAttemptIdList.add(attempt.getID());
+      }
+      
+      if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())
+          && shouldDispatchMapCompletionEvent) {
+        job.mapAttemptCompletionEvents.add(tce);
       }
     }
   }
