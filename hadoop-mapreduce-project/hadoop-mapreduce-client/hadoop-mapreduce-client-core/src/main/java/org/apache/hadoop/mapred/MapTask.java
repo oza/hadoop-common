@@ -1466,7 +1466,7 @@ class MapTask extends Task {
       
       if (!needToExit && aggregationTargets.length > 1) {
         // Start to aggregation.
-        runAggregation(aggregationTargets);
+        runAggregation(outputPath, aggregationTargets);
       } else {
         LOG.info("[MR-4502]: I'm NOT aggregator... ID is:" + getTaskID());
       }
@@ -1474,14 +1474,27 @@ class MapTask extends Task {
       
     }
     
-    private void runAggregation(TaskAttemptID[] aggregationTargets) {
+    private void runAggregation(Path outputPath, TaskAttemptID[] aggregationTargets) {
       String basePath = job.get(MRConfig.LOCAL_DIR);
       LOG.info("[MR-4502]: I'm aggregator! Start to aggregatte local IFiles." +
       		"LOCAL_DIR is :" + basePath);
-      File[] files = createInputFilesFromTaskAttempts(basePath, aggregationTargets);
       long finalOutFileSize = 0;
       int finalIndexFileSize = partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH;
       FSDataOutputStream finalOut = null;
+      
+
+      final String dstPathName = outputPath.getParent() + Path.SEPARATOR + 
+          outputPath.getName() + ".tmp";
+      try {
+        sameVolRename(outputPath, new Path(dstPathName));
+      } catch (IOException e1) {
+        // TODO handle exception
+        e1.printStackTrace();
+        LOG.error(e1 + ", dstPathName is " + dstPathName);
+      }
+      
+      File[] files = createInputFilesFromTaskAttempts(basePath, 
+          dstPathName, aggregationTargets);
       
       try {
         Path finalIndexFile =
@@ -1551,14 +1564,16 @@ class MapTask extends Task {
       } catch(Exception e) {
         // TODO Implement this method!
         LOG.error(e.toString());
+        // TODO: for fast recovery
+        //sameVolRename(new Path(dstPathName), outputPath);
       }
 
     }
 
     private File[] createInputFilesFromTaskAttempts(String basePath,
-        TaskAttemptID[] aggregationTargets) {
+        String dstPathName, TaskAttemptID[] aggregationTargets) {
       final String outputDirName = basePath + Path.SEPARATOR + "output" + Path.SEPARATOR;
-      File[] files = new File[aggregationTargets.length];
+      File[] files = new File[aggregationTargets.length+1];
       int i = 0;
       
       for (TaskAttemptID attemptID : aggregationTargets) {
@@ -1566,6 +1581,7 @@ class MapTask extends Task {
             Path.SEPARATOR + MapOutputFile.MAP_OUTPUT_FILENAME_STRING);
         i++;
       }
+      files[i] = new File(dstPathName);
       
       return files;
     }
