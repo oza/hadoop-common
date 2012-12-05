@@ -1415,7 +1415,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 for (TaskAttemptCompletionEvent ev:events) {
                   // stop to fetch.
                   ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
-                  job.taskAttemptCompletionEvents.add(ev);
+                  //job.taskAttemptCompletionEvents.add(ev);
+                  job.mapAttemptCompletionEvents.add(ev);
                 }
               }
             }
@@ -1439,7 +1440,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   :job.aggregationWaitMap.entrySet()) {
                 ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
                 for (TaskAttemptCompletionEvent ev:events) {
-                  job.taskAttemptCompletionEvents.add(ev);
+                  //job.taskAttemptCompletionEvents.add(ev);
+                  job.mapAttemptCompletionEvents.add(ev);
                 }
               }
               LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
