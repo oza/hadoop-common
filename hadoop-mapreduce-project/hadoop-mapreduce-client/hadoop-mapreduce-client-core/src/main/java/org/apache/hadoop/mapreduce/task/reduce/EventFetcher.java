@@ -174,6 +174,7 @@ class EventFetcher<K,V> extends Thread {
               event.getTaskAttemptId() + "'");
           break;
         case AGGREGATED:
+          scheduler.obsoleteMapOutput(event.getTaskAttemptId());
           LOG.info("Ignoring output of aggregated its outputs: '" +  
                    " aggregated: '" + event.getTaskAttemptId() + "'");
           break;
