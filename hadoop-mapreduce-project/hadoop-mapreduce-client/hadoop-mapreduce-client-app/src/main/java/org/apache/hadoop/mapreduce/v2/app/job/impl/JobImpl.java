@@ -1449,19 +1449,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.hostname is :" + hostname);
               shouldDispatchMapCompletionEvent = false;
               job.aggregationWaitMap.put(hostname, tce);
-            } else {
-              // This is final phase of map.
-              for (Entry<String, ArrayList<TaskAttemptCompletionEvent>> entry
-                  :job.aggregationWaitMap.entrySet()) {
-                ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
-                for (TaskAttemptCompletionEvent ev:events) {
-                  //job.taskAttemptCompletionEvents.add(ev);
-                  job.mapAttemptCompletionEvents.add(ev);
-                }
-              }
-              LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
-              job.aggregationWaitMap.clear();
             }
+          }
+          //  
+          if (job.noMoreAggregation()){
+            // This is final phase of map.
+            for (Entry<String, ArrayList<TaskAttemptCompletionEvent>> entry
+                :job.aggregationWaitMap.entrySet()) {
+              ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
+              for (TaskAttemptCompletionEvent ev:events) {
+                //job.taskAttemptCompletionEvents.add(ev);
+                job.mapAttemptCompletionEvents.add(ev);
+              }
+            }
+            LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
+            job.aggregationWaitMap.clear();
           }
         }
         
@@ -1658,6 +1660,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       shouldWait = true;
     }
     return shouldWait;
+  }
+  
+  public boolean noMoreAggregation() {
+    return !shouldWaitForAggregation();
   }
 
   private static class DiagnosticsUpdateTransition implements
