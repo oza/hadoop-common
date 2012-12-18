@@ -1495,6 +1495,18 @@ class MapTask extends Task {
       
       File[] files = createInputFilesFromTaskAttempts(basePath, 
           dstPathName, aggregationTargets);
+      Path[] indexFileName = createFilesFromTaskAttempts(files);
+      
+      Path filename[] = new Path[files.length];
+      try {
+        for(int i = 0; i < files.length; i++) {
+          filename[i] = new Path(files[i].getPath());
+          finalOutFileSize += rfs.getFileStatus(filename[i]).getLen();
+        }
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       
       try {
         Path finalIndexFile =
@@ -1509,16 +1521,17 @@ class MapTask extends Task {
 
         IndexRecord rec = new IndexRecord();
         final SpillRecord spillRec = new SpillRecord(partitions);
+
         for (int parts = 0; parts < partitions; parts++) {
           //create the segments to be merged
           List<Segment<K,V>> segmentList =
               new ArrayList<Segment<K, V>>(files.length);
-          for(int i = 0; i < files.length; i++) {
-            //IndexRecord indexRecord = indexCacheList.get(i).getIndex(parts);
-            Path path = new Path(files[i].getAbsolutePath());
+          for(int i = 0; i < numSpills; i++) {
+            IndexRecord indexRecord = new SpillRecord(indexFileName[i], job) .getIndex(parts);
 
             Segment<K,V> s =
-                new Segment<K,V>(job, rfs, path, codec, true);
+                new Segment<K,V>(job, rfs, filename[i], indexRecord.startOffset,
+                    indexRecord.partLength, codec, true);
             segmentList.add(i, s);
           }
 
@@ -1556,6 +1569,8 @@ class MapTask extends Task {
           rec.rawLength = writer.getRawLength();
           rec.partLength = writer.getCompressedLength();
           spillRec.putIndex(rec, parts);
+          
+          writer = null;
         }
         spillRec.writeToFile(finalIndexFile, job);
         finalOut.close();
@@ -1568,6 +1583,14 @@ class MapTask extends Task {
         //sameVolRename(new Path(dstPathName), outputPath);
       }
 
+    }
+
+    private Path[] createFilesFromTaskAttempts(File[] files) {
+      Path paths[] = new Path[files.length];
+      for (int i = 0; i < files.length; i++) {
+        paths[i] = new Path(files[i].getAbsolutePath() + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING);
+      }
+      return paths;
     }
 
     private File[] createInputFilesFromTaskAttempts(String basePath,
