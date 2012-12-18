@@ -65,6 +65,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunchedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.AggregationWaitMap;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskImpl;
@@ -431,8 +432,8 @@ public class MRApp extends MRAppMaster {
           WrappedJvmID jvmID) {
       }
       @Override
-      public void registerAggregatorMap(
-          ConcurrentMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap) {
+      public void registerAggregationWaitMap(
+          AggregationWaitMap aggregationWaitMap) {
       }
     };
   }

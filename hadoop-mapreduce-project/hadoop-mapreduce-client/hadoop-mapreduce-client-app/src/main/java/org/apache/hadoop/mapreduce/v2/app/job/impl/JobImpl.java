@@ -164,7 +164,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    */
   private final HashMap<NodeId, List<TaskAttemptId>> 
     nodesToSucceededTaskAttempts = new HashMap<NodeId, List<TaskAttemptId>>();
-  private AggregationWaitMap aggregationWaitMap = new AggregationWaitMap();
+  private AggregationWaitMap aggregationWaitMap;
 
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
@@ -416,7 +416,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private JobTokenSecretManager jobTokenSecretManager;
 
   private final boolean isAggregationEnabled;
-  private ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap;
   
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
@@ -488,8 +487,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return this.numMapTasks;
   }
   
-  public JobImpl registerAggregatorMap(ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> map) {
-    aggregatorMap = map;
+  public JobImpl registerAggregationWaitMap(AggregationWaitMap map) {
+    aggregationWaitMap = map;
     return this;
   }
 
@@ -1199,7 +1198,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.clock, job.completedTasksFromPreviousRun, 
                 job.applicationAttemptId.getAttemptId(),
                 job.metrics, job.appContext);
-        task.registerAggregatorMap(job.aggregatorMap);
         job.addTask(task);
       }
       LOG.info("Input size for job " + job.jobId + " = " + inputLength
@@ -1398,7 +1396,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       TaskAttemptId attemptId = tce.getAttemptId();
       TaskId taskId = attemptId.getTaskId();
 
-
       //make the previous completion event as obsolete if it exists
       Object successEventNo = 
         job.successAttemptCompletionEventNoMap.remove(taskId);
@@ -1421,19 +1418,17 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             LOG.info("[MR-4502] Aggregator succeeded to local aggregation.");
             String taskIdString = taskId.toString();
             List<TaskAttemptCompletionEvent>events;
-                
-            if (job.aggregatorMap.containsKey(taskIdString)) {
-              events = job.aggregatorMap.get(taskIdString);
-              // MAPREDUCE-4902
-              if (events != null && events.size() > 0) {
-                for (TaskAttemptCompletionEvent ev:events) {
-                  // stop to fetch.
-                  ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
-                  //job.taskAttemptCompletionEvents.add(ev);
-                  job.mapAttemptCompletionEvents.add(ev);
-                }
+
+            events = job.aggregationWaitMap.removeFinishedEvents(taskIdString);
+            if (events != null && events.size() > 0) {
+              for (TaskAttemptCompletionEvent ev:events) {
+                // stop to fetch.
+                ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
+                //job.taskAttemptCompletionEvents.add(ev);
+                job.mapAttemptCompletionEvents.add(ev);
               }
             }
+
           } else {
             String hostname = null;
             java.net.URL url;
@@ -1443,7 +1438,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             } catch (Exception e) {
               LOG.error(e.toString());
             }
-            
+
             if (job.shouldWaitForAggregation()) {
               // wait until finishing aggregation.
               LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.hostname is :" + hostname);
@@ -1454,21 +1449,17 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           //  
           if (job.noMoreAggregation()){
             // This is final phase of map.
-            for (Entry<String, ArrayList<TaskAttemptCompletionEvent>> entry
-                :job.aggregationWaitMap.entrySet()) {
-              ArrayList<TaskAttemptCompletionEvent> events = entry.getValue();
-              for (TaskAttemptCompletionEvent ev:events) {
-                //job.taskAttemptCompletionEvents.add(ev);
-                job.mapAttemptCompletionEvents.add(ev);
-              }
+            ArrayList<TaskAttemptCompletionEvent>events  = job.aggregationWaitMap.removeAllEvents();
+            for (TaskAttemptCompletionEvent ev:events) {
+              ev.setStatus(TaskAttemptCompletionEventStatus.SUCCEEDED);
+              job.mapAttemptCompletionEvents.add(ev);
             }
             LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
-            job.aggregationWaitMap.clear();
           }
         }
-        
-        // here we could have simply called Task.getSuccessfulAttempt() but
-        // the event that triggers this code is sent before
+
+          // here we could have simply called Task.getSuccessfulAttempt() but
+          // the event that triggers this code is sent before
         // Task.successfulAttempt is set and so there is no guarantee that it
         // will be available now
         Task task = job.tasks.get(taskId);

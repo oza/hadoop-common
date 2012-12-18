@@ -523,7 +523,7 @@ public abstract class TaskAttemptImpl implements
     this.appContext = appContext;
     // TODO: Fix to pass by JobConf MR-4502
     this.isAggregationEnabled = true;
-    this.aggregationThreshold = 10;
+    this.aggregationThreshold = 3;
     
     if (taskId.getTaskType() ==  TaskType.MAP) {
       this.aggregationWaitMap = aggregationWaitMap;
@@ -1594,22 +1594,10 @@ public abstract class TaskAttemptImpl implements
     
     // FIXME: A bit dangerous.
     hostname = this.nodeHttpAddress.split(":")[0];
-    LOG.info("[MR-4502] hostname: " + hostname);
-    LOG.info("[MR-4502] check aggregationWaitMap :" + aggregationWaitMap.containsKey(hostname));
-    if (aggregationWaitMap.containsKey(hostname)) {
-      ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
-      LOG.info("[MR-4502]" + " hostname is " + hostname + "list size is:" + list.size());
-      if (list != null && (list.size() > aggregationThreshold)) {
-        if (!aggregatorMap.containsKey(hostname)) {
-          ArrayList<TaskAttemptCompletionEvent> events = aggregationWaitMap.get(hostname);
-          String taskId = getID().getTaskId().toString();
-          aggregatorMap.put(taskId, events);
-          aggregationWaitMap.remove(hostname);
-          LOG.info("[MR-4502] taskId: " + taskId + ", hostname: " + hostname);
-          shouldBeAggregator = true;
-        }
-      }
-    }
+    
+    shouldBeAggregator = aggregationWaitMap.isAggregatable(hostname,
+        getID(), aggregationThreshold);
+    
     return shouldBeAggregator;
   }
 

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,6 +52,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.AggregationWaitMap;
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -73,7 +75,6 @@ public class TaskAttemptListenerImpl extends CompositeService
   private static final JvmTask TASK_FOR_INVALID_JVM = new JvmTask(null, true);
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptListenerImpl.class);
-  private ConcurrentMap<String,List<TaskAttemptCompletionEvent>> aggregatorMap;
 
   private AppContext context;
   private Server server;
@@ -86,6 +87,8 @@ public class TaskAttemptListenerImpl extends CompositeService
       .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>()); 
   
   private JobTokenSecretManager jobTokenSecretManager = null;
+
+  private AggregationWaitMap aggregationWaitMap;
   
   public TaskAttemptListenerImpl(AppContext context,
       JobTokenSecretManager jobTokenSecretManager) {
@@ -94,8 +97,8 @@ public class TaskAttemptListenerImpl extends CompositeService
     this.jobTokenSecretManager = jobTokenSecretManager;
   }
   
-  public void registerAggregatorMap(ConcurrentMap<String, List<TaskAttemptCompletionEvent>> map) {
-    aggregatorMap = map;
+  public void registerAggregationWaitMap(AggregationWaitMap map) {
+    aggregationWaitMap = map;
   }
 
   @Override
@@ -264,33 +267,16 @@ public class TaskAttemptListenerImpl extends CompositeService
     // TODO: XXX implement this code.
     LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag()
         + "," + aggregator.getId() + "," + aggregator.getTaskID());
-    List<TaskAttemptCompletionEvent> events;
-    String taskId = aggregator.getTaskID().toString();
-    List<TaskAttemptID> aggregationTargets = new ArrayList<TaskAttemptID>();
+   
     
-    if (aggregatorMap.containsKey(taskId)) {
-      events = aggregatorMap.get(taskId) ;
-      
-      if (events.size() > 1) {
-        for(TaskAttemptCompletionEvent ev:events){
-          TaskAttemptID attemptID = TypeConverter.fromYarn(ev.getAttemptId());
-          aggregationTargets.add(attemptID);
-        }
-      } else {
-        // Dummy
-        aggregationTargets.add(aggregator);
-      }
-        
-      LOG.info("[MR-4502] target size is " + aggregationTargets.size());
-    } else {
-     // Dummy
-     aggregationTargets.add(aggregator);
-    }
+    List<TaskAttemptID> aggregationTargets = aggregationWaitMap.getAggregationTargets(aggregator);
+
+    LOG.info("[MR-4502] aggregationTargets:" + aggregationTargets);
     
     TaskAttemptID[] attempts = aggregationTargets.toArray(new TaskAttemptID[0]);
     return new AggregationTarget(attempts);
   }
-
+  
 
   @Override
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(
@@ -514,4 +500,5 @@ public class TaskAttemptListenerImpl extends CompositeService
     return ProtocolSignature.getProtocolSignature(this, 
         protocol, clientVersion, clientMethodsHash);
   }
+
 }

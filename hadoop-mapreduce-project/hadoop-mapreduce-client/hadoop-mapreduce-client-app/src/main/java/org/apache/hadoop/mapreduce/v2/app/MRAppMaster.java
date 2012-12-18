@@ -75,6 +75,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.AggregationWaitMap;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
@@ -186,6 +187,9 @@ public class MRAppMaster extends CompositeService {
   // MR-4502
   private final ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap =
       new ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>>();
+
+  private AggregationWaitMap aggregationWaitMap =
+      new AggregationWaitMap();
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
@@ -501,7 +505,7 @@ public class MRAppMaster extends CompositeService {
             taskAttemptListener, jobTokenSecretManager, fsTokens, clock,
             completedTasksFromPreviousRun, metrics, committer, newApiCommitter,
             currentUser.getUserName(), appSubmitTime, amInfos, context)
-        .registerAggregatorMap(aggregatorMap);
+        .registerAggregationWaitMap(aggregationWaitMap);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,
@@ -589,7 +593,7 @@ public class MRAppMaster extends CompositeService {
   protected TaskAttemptListener createTaskAttemptListener(AppContext context) {
     TaskAttemptListener lis =
         new TaskAttemptListenerImpl(context, jobTokenSecretManager);
-    lis.registerAggregatorMap(aggregatorMap);
+    lis.registerAggregationWaitMap(aggregationWaitMap);
     return lis;
   }
 

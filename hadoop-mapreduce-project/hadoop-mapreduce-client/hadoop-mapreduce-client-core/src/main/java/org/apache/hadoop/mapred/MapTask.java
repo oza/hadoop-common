@@ -1457,20 +1457,24 @@ class MapTask extends Task {
       }
       // release sort buffer before the merge
       kvbuffer = null;
-      boolean needToExit = mergeParts();
+      boolean needToCompleteSortPhase = mergeParts();
       Path outputPath = mapOutputFile.getOutputFile();
       fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
       
       // MR-4502: Start node-level Aggregation.
       TaskAttemptID[] aggregationTargets = umbilical.getAggregationTargets(getTaskID()).getAggregationTargets();
       
-      if (!needToExit && aggregationTargets.length > 1) {
+      if (aggregationTargets.length > 1) {
         // Start to aggregation.
         runAggregation(outputPath, aggregationTargets);
       } else {
         LOG.info("[MR-4502]: I'm NOT aggregator... ID is:" + getTaskID());
+        //umbilical.cancelAggregation(getTaskID());
       }
       
+      if (needToCompleteSortPhase) {
+        sortPhase.complete();
+      }      
       
     }
     
@@ -1483,19 +1487,25 @@ class MapTask extends Task {
       FSDataOutputStream finalOut = null;
       
 
-      final String dstPathName = outputPath.getParent() + Path.SEPARATOR + 
-          outputPath.getName() + ".tmp";
+      final String baseOutputPathName = outputPath.getParent() + Path.SEPARATOR;
+      final String tmpOutputPathName = baseOutputPathName + outputPath.getName() + ".tmp";
+      final String indexOutputPathName = baseOutputPathName  + outputPath.getName() + 
+          MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING;
+      LOG.info("[MR-4502] tmpOutputPathName: " + tmpOutputPathName +
+          ", indexOutputPathName: " + indexOutputPathName);
       try {
-        sameVolRename(outputPath, new Path(dstPathName));
+        sameVolRename(outputPath, new Path(tmpOutputPathName));
+        sameVolRename(new Path(indexOutputPathName),
+            new Path(baseOutputPathName + outputPath.getName() + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING + ".tmp"));
       } catch (IOException e1) {
         // TODO handle exception
         e1.printStackTrace();
-        LOG.error(e1 + ", dstPathName is " + dstPathName);
+        LOG.error(e1 + ", dstPathName is " + tmpOutputPathName);
       }
       
       File[] files = createInputFilesFromTaskAttempts(basePath, 
-          dstPathName, aggregationTargets);
-      Path[] indexFileName = createFilesFromTaskAttempts(files);
+          tmpOutputPathName, aggregationTargets);
+      Path[] indexFileName = createIndexFilesFromFiles(files);
       
       Path filename[] = new Path[files.length];
       try {
@@ -1526,8 +1536,8 @@ class MapTask extends Task {
           //create the segments to be merged
           List<Segment<K,V>> segmentList =
               new ArrayList<Segment<K, V>>(files.length);
-          for(int i = 0; i < numSpills; i++) {
-            IndexRecord indexRecord = new SpillRecord(indexFileName[i], job) .getIndex(parts);
+          for(int i = 0; i < files.length; i++) {
+            IndexRecord indexRecord = new SpillRecord(indexFileName[i], job).getIndex(parts);
 
             Segment<K,V> s =
                 new Segment<K,V>(job, rfs, filename[i], indexRecord.startOffset,
@@ -1585,7 +1595,7 @@ class MapTask extends Task {
 
     }
 
-    private Path[] createFilesFromTaskAttempts(File[] files) {
+    private Path[] createIndexFilesFromFiles(File[] files) {
       Path paths[] = new Path[files.length];
       for (int i = 0; i < files.length; i++) {
         paths[i] = new Path(files[i].getAbsolutePath() + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING);
@@ -1927,7 +1937,8 @@ class MapTask extends Task {
           indexCacheList.get(0).writeToFile(
             mapOutputFile.getOutputIndexFileForWriteInVolume(filename[0]), job);
         }
-        sortPhase.complete();
+        // MR-4502 this must be lazy.
+        // sortPhase.complete();
         return true;
       }
 
@@ -1968,7 +1979,8 @@ class MapTask extends Task {
         } finally {
           finalOut.close();
         }
-        sortPhase.complete();
+        // MR-4502 this must be lazy.
+        //sortPhase.complete();
         return true;
       }
       {
