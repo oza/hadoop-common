@@ -1496,7 +1496,7 @@ class MapTask extends Task {
       try {
         sameVolRename(outputPath, new Path(tmpOutputPathName));
         sameVolRename(new Path(indexOutputPathName),
-            new Path(baseOutputPathName + outputPath.getName() + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING + ".tmp"));
+            new Path(tmpOutputPathName + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING));
       } catch (IOException e1) {
         // TODO handle exception
         e1.printStackTrace();
