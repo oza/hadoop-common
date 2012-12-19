@@ -1457,6 +1457,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               ev.setStatus(TaskAttemptCompletionEventStatus.SUCCEEDED);
               job.mapAttemptCompletionEvents.add(ev);
             }
+            shouldDispatchMapCompletionEvent = true;
             LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
           }
         }
