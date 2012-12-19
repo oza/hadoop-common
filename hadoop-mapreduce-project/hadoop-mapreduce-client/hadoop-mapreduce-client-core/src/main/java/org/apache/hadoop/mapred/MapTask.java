@@ -1584,7 +1584,7 @@ class MapTask extends Task {
         }
         spillRec.writeToFile(finalIndexFile, job);
         finalOut.close();
-        sortPhase.complete();
+        //sortPhase.complete();
 
       } catch(Exception e) {
         // TODO Implement this method!

@@ -2,7 +2,6 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,13 +15,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 
 
 public class AggregationWaitMap {
   private final ConcurrentHashMap<String, ArrayList<TaskAttemptCompletionEvent>> aggregationWaitMap;
   private final ConcurrentHashMap<String, String> taskToHostnameMap;
+  private final ConcurrentHashMap<String, Boolean> taskToAggregated;
   private final ConcurrentMap<String,List<TaskAttemptCompletionEvent>> aggregatorMap;
   private final ReadWriteLock rwLock;
   private final Lock readLock;
@@ -36,14 +35,7 @@ public class AggregationWaitMap {
     this.aggregationWaitMap = new ConcurrentHashMap<String, ArrayList<TaskAttemptCompletionEvent>>();
     this.taskToHostnameMap = new ConcurrentHashMap<String, String>();
     this.aggregatorMap = new ConcurrentHashMap<String, List<TaskAttemptCompletionEvent>>();
-  }
-  
-  public Lock getReadLock() {
-    return readLock;
-  }
-  
-  public Lock getWriteLock() {
-    return writeLock;
+    this.taskToAggregated = new ConcurrentHashMap<String, Boolean>();
   }
 
   public ArrayList<TaskAttemptCompletionEvent> get(String hostname) {
@@ -172,6 +164,7 @@ public class AggregationWaitMap {
             TaskAttemptID attemptID = TypeConverter.fromYarn(ev.getAttemptId());
             aggregationTargets.add(attemptID);
           }
+          taskToAggregated.put(taskId, new Boolean(true));
           LOG.info("[MR-4502] events.size: " + events.size());
         } else {
           // Dummy 
@@ -218,6 +211,7 @@ public class AggregationWaitMap {
               taskToHostnameMap.put(taskId, hostname);
               aggregatorMap.put(taskId, events);
               isAggregatable = true;
+              taskToAggregated.put(taskId, new Boolean(false));
             } else {
               LOG.info("[MR-4502] The task id is already used! taskId: " + taskId + ", hostname: " + hostname);
             }
@@ -250,11 +244,22 @@ public class AggregationWaitMap {
     List<TaskAttemptCompletionEvent> events = null;
     writeLock.lock();
     try {
-      if (aggregatorMap.containsKey(taskId)) {
+      if (!taskToAggregated.get(taskId)) {
         events = aggregatorMap.remove(taskId);
+        String hostname = taskToHostnameMap.remove(taskId);
+        if (aggregationWaitMap.containsKey(hostname)) {
+          ArrayList<TaskAttemptCompletionEvent> evs = aggregationWaitMap.get(hostname);
+          evs.addAll(events);
+        } else {
+          ArrayList<TaskAttemptCompletionEvent> evs = new ArrayList<TaskAttemptCompletionEvent>();
+          evs.addAll(events);
+        }
+      } else if (aggregatorMap.containsKey(taskId)) {
+        // taskToAggregated is true, it is really aggregator task.
+        events = aggregatorMap.remove(taskId);
+        String hostname = taskToHostnameMap.remove(taskId);
+        LOG.info("[MR-4502] taskId " + taskId + " and hostname " + hostname + " is unbinded");
       }
-      String hostname = taskToHostnameMap.remove(taskId);
-      LOG.info("[MR-4502] taskId " + taskId + " and hostname " + hostname + " is unbinded");
           
     } finally {
       writeLock.unlock();
