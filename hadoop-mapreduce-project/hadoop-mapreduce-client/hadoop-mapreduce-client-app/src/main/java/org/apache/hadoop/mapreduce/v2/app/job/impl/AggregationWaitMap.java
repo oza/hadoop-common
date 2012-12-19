@@ -253,6 +253,7 @@ public class AggregationWaitMap {
         } else {
           ArrayList<TaskAttemptCompletionEvent> evs = new ArrayList<TaskAttemptCompletionEvent>();
           evs.addAll(events);
+          aggregationWaitMap.put(hostname, evs);
         }
       } else if (aggregatorMap.containsKey(taskId)) {
         // taskToAggregated is true, it is really aggregator task.
