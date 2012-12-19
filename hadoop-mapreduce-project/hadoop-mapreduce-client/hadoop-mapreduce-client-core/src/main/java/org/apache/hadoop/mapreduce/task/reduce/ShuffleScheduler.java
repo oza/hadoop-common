@@ -279,12 +279,17 @@ class ShuffleScheduler<K,V> {
   
   public synchronized void skip(
       String hostName,
+      String hostUrl,
       TaskID taskId,
       TaskAttemptID idToSkip) {
     if (!finishedMaps[taskId.getId()]) {
       finishedMaps[taskId.getId()] = true;
       
       MapHost host = mapLocations.get(hostName);
+      if (host == null) {
+        host = new MapHost(hostName, hostUrl);
+        mapLocations.put(hostName, host);
+      }
       host.addSkippingMap(idToSkip);
       
       if (--remainingMaps == 0) {

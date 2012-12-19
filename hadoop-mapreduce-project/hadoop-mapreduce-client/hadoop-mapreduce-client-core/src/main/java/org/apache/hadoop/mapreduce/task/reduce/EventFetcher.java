@@ -176,6 +176,7 @@ class EventFetcher<K,V> extends Thread {
         case AGGREGATED:
           u = getBaseURI(event.getTaskTrackerHttp());
           scheduler.skip(u.getHost() + ":" + u.getPort(),
+              u.toString(),
               event.getTaskAttemptId().getTaskID(), event.getTaskAttemptId());
           LOG.info("Ignoring output of aggregated its outputs: '" +  
                    " aggregated: '" + event.getTaskAttemptId() + "'");
