@@ -291,6 +291,7 @@ class ShuffleScheduler<K,V> {
         mapLocations.put(hostName, host);
       }
       host.addSkippingMap(idToSkip);
+      notifyAll();
       
       if (--remainingMaps == 0) {
         notifyAll();
