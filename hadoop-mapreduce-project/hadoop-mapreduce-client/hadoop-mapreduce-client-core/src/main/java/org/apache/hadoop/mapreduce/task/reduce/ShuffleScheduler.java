@@ -277,11 +277,13 @@ class ShuffleScheduler<K,V> {
   }
   
   public synchronized void skip(TaskID taskId) {
-    finishedMaps[taskId.getId()] = true;
-    if (--remainingMaps == 0) {
-      notifyAll();
+    if (!finishedMaps[taskId.getId()]) {
+      finishedMaps[taskId.getId()] = true;
+      if (--remainingMaps == 0) {
+        notifyAll();
+      }
+      updateStatus();
     }
-    updateStatus();
   }  
   
   public synchronized void addKnownMapOutput(String hostName, 
