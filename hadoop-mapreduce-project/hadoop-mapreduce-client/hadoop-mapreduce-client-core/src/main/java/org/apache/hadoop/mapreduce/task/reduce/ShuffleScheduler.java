@@ -145,6 +145,7 @@ class ShuffleScheduler<K,V> {
       reduceShuffleBytes.increment(bytes);
       lastProgressTime = System.currentTimeMillis();
       LOG.debug("map " + mapId + " done " + status.getStateString());
+      LOG.info("map " + mapId + " done " + status.getStateString());
     }
   }
   
@@ -276,11 +277,25 @@ class ShuffleScheduler<K,V> {
     }
   }
   
-  public synchronized void skip(TaskID taskId) {
+  public synchronized void skip(
+      String hostName,
+      TaskID taskId,
+      TaskAttemptID idToSkip) {
     if (!finishedMaps[taskId.getId()]) {
       finishedMaps[taskId.getId()] = true;
+      
+      MapHost host = mapLocations.get(hostName);
+      host.addSkippingMap(idToSkip);
+      
       if (--remainingMaps == 0) {
         notifyAll();
+      }
+      LOG.info("[MR-4502][Reducer] remainingMaps is " + remainingMaps);
+      LOG.info("map " + taskId + " done " + status.getStateString());
+      for (int i = 0; i < totalMaps; i++){
+        if (finishedMaps[i] == false) {
+          LOG.info("map " + i + "is not yed fetched.");
+        }
       }
       updateStatus();
     }

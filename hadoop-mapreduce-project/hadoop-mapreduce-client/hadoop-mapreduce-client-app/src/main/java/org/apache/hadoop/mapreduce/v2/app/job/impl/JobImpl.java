@@ -1427,6 +1427,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 //job.taskAttemptCompletionEvents.add(ev);
                 job.mapAttemptCompletionEvents.add(ev);
                 LOG.info("[MR-4502] Aggregator succeeded to local aggregation.");
+                shouldDispatchMapCompletionEvent = true;
               }
             } else {
                 LOG.info("[MR-4502] Tried to aggregate, but " + taskId + "failed.");
