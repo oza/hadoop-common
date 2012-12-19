@@ -1420,7 +1420,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             List<TaskAttemptCompletionEvent>events;
 
             events = job.aggregationWaitMap.removeFinishedEvents(taskIdString);
-            if (events != null && events.size() > 0) {
+            if (events != null && events.size() > 1) {
               for (TaskAttemptCompletionEvent ev:events) {
                 // stop to fetch.
                 ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
@@ -1430,10 +1430,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 shouldDispatchMapCompletionEvent = true;
               }
             } else {
-                LOG.info("[MR-4502] Tried to aggregate, but " + taskId + "failed.");
+              LOG.info("[MR-4502] Tried to aggregate, but " + taskId + "failed.");
+              String hostname = null;
+              java.net.URL url;
+              try {
+                url = new java.net.URL(tce.getMapOutputServerAddress());
+                hostname = url.getHost();
+              } catch (Exception e) {
+                LOG.error(e.toString());
+              }
+
+              if (job.shouldWaitForAggregation()) {
+                // wait until finishing aggregation.
+                LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.hostname is :" + hostname);
+                shouldDispatchMapCompletionEvent = false;
+                job.aggregationWaitMap.put(hostname, tce);
+              } else {
+                shouldDispatchMapCompletionEvent = true;
+              }
             }
-            // here is problem!
-            // isAggregating is true, but is can be possible.
 
           } else {
             String hostname = null;
@@ -1656,7 +1671,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     boolean shouldWait = false;
     int remain =  getTotalMaps() - getCompletedMaps();
     
-    if (remain > 5){ 
+    if (remain > 1){ 
       shouldWait = true;
     }
     return shouldWait;
