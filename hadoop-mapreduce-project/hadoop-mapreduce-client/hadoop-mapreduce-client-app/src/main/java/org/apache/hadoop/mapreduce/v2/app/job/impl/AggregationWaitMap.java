@@ -255,6 +255,7 @@ public class AggregationWaitMap {
           evs.addAll(events);
           aggregationWaitMap.put(hostname, evs);
         }
+        events = null;
       } else if (aggregatorMap.containsKey(taskId)) {
         // taskToAggregated is true, it is really aggregator task.
         events = aggregatorMap.remove(taskId);
