@@ -1432,6 +1432,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             } else {
                 LOG.info("[MR-4502] Tried to aggregate, but " + taskId + "failed.");
             }
+            // here is problem!
+            // isAggregating is true, but is can be possible.
 
           } else {
             String hostname = null;
@@ -1448,6 +1450,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               LOG.info("[MR-4502] " + attemptId.getTaskId() + " is waiting for aggregation.hostname is :" + hostname);
               shouldDispatchMapCompletionEvent = false;
               job.aggregationWaitMap.put(hostname, tce);
+            } else {
+              shouldDispatchMapCompletionEvent = true;
             }
           }
           //  
@@ -1652,7 +1656,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     boolean shouldWait = false;
     int remain =  getTotalMaps() - getCompletedMaps();
     
-    if (remain > 1){ 
+    if (remain > 5){ 
       shouldWait = true;
     }
     return shouldWait;
