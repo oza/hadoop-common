@@ -206,7 +206,7 @@ public class AggregationWaitMap {
           if (!aggregatorMap.containsKey(hostname)) {
             ArrayList<TaskAttemptCompletionEvent> events = aggregationWaitMap.remove(hostname);
             String taskId = id.getTaskId().toString();
-            if (taskToHostnameMap.isEmpty()) {
+            if (!taskToHostnameMap.containsKey(taskId)) {
               LOG.info("[MR-4502] Aggregator! taskId: " + taskId + ", hostname: " + hostname);
               taskToHostnameMap.put(taskId, hostname);
               aggregatorMap.put(taskId, events);
