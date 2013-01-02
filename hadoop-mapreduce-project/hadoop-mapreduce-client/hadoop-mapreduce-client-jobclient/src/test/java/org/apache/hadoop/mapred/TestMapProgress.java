@@ -141,6 +141,14 @@ public class TestMapProgress extends TestCase {
         SortedRanges.Range range) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
+
+    @Override
+    public AggregationTarget getAggregationTargets(TaskAttemptID aggregator)
+        throws IOException {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
   }
   
   private FileSystem fs = null;
