@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +39,9 @@ import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.TaskHeartbeatHandler;
@@ -48,6 +53,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.AggregationWaitMap;
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -84,6 +90,8 @@ public class TaskAttemptListenerImpl extends CompositeService
       .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>()); 
   
   private JobTokenSecretManager jobTokenSecretManager = null;
+
+  private AggregationWaitMap aggregationWaitMap;
   
   public TaskAttemptListenerImpl(AppContext context,
       JobTokenSecretManager jobTokenSecretManager,
@@ -92,6 +100,10 @@ public class TaskAttemptListenerImpl extends CompositeService
     this.context = context;
     this.jobTokenSecretManager = jobTokenSecretManager;
     this.rmHeartbeatHandler = rmHeartbeatHandler;
+  }
+  
+  public void registerAggregationWaitMap(AggregationWaitMap map) {
+    aggregationWaitMap = map;
   }
 
   @Override
@@ -263,6 +275,22 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void shuffleError(TaskAttemptID taskAttemptID, String message) throws IOException {
     // TODO: This isn't really used in any MR code. Ask for removal.    
   }
+
+  @Override
+  public AggregationTarget getAggregationTargets(TaskAttemptID aggregator) throws IOException {
+    // TODO: XXX implement this code.
+    LOG.info("Extended Umbilical Protocol: startNewAggregation. taskId is: " + aggregator.getAggregatingFlag()
+        + "," + aggregator.getId() + "," + aggregator.getTaskID());
+   
+    
+    List<TaskAttemptID> aggregationTargets = aggregationWaitMap.getAggregationTargets(aggregator);
+
+    LOG.info("[MR-4502] aggregationTargets:" + aggregationTargets);
+    
+    TaskAttemptID[] attempts = aggregationTargets.toArray(new TaskAttemptID[0]);
+    return new AggregationTarget(attempts);
+  }
+  
 
   @Override
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(
@@ -486,4 +514,5 @@ public class TaskAttemptListenerImpl extends CompositeService
     return ProtocolSignature.getProtocolSignature(this, 
         protocol, clientVersion, clientMethodsHash);
   }
+
 }
