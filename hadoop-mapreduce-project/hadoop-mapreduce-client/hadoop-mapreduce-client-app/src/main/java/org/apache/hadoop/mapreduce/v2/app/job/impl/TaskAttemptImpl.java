@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.concurrent.ConcurrentHashMap;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -67,6 +69,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionE
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -175,7 +178,8 @@ public abstract class TaskAttemptImpl implements
   private int shufflePort = -1;
   private String trackerName;
   private int httpPort;
-
+  private final AggregationWaitMap aggregationWaitMap ;
+  
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
 
@@ -492,6 +496,9 @@ public abstract class TaskAttemptImpl implements
   
   //this is the last status reported by the REMOTE running attempt
   private TaskAttemptStatus reportedStatus;
+  private final int aggregationThreshold;
+  private boolean isAggregationEnabled;
+  private ConcurrentMap<String,List<TaskAttemptCompletionEvent>> aggregatorMap;
   
   private static final String LINE_SEPARATOR = System
       .getProperty("line.separator");
@@ -502,6 +509,7 @@ public abstract class TaskAttemptImpl implements
       JobConf conf, String[] dataLocalHosts,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
+      AggregationWaitMap aggregationWaitMap,
       AppContext appContext) {
     oldJobId = TypeConverter.fromYarn(taskId.getJobId());
     this.conf = conf;
@@ -511,6 +519,15 @@ public abstract class TaskAttemptImpl implements
     attemptId.setId(i);
     this.taskAttemptListener = taskAttemptListener;
     this.appContext = appContext;
+    // TODO: Fix to pass by JobConf MR-4502
+    this.isAggregationEnabled = false;
+    this.aggregationThreshold = 3;
+    
+    if (taskId.getTaskType() ==  TaskType.MAP) {
+      this.aggregationWaitMap = aggregationWaitMap;
+    } else {
+      this.aggregationWaitMap = null;
+    }
 
     // Initialize reportedStatus
     reportedStatus = new TaskAttemptStatus();
@@ -944,7 +961,7 @@ public abstract class TaskAttemptImpl implements
       readLock.unlock();
     }
   }
-
+  
   @Override
   public List<String> getDiagnostics() {
     List<String> result = new ArrayList<String>();
@@ -1267,6 +1284,15 @@ public abstract class TaskAttemptImpl implements
     }
     return result;
   }
+  
+  public TaskAttemptImpl registerAggregatorMap(ConcurrentMap<String, List<TaskAttemptCompletionEvent>> map) {
+    aggregatorMap = map;
+    return this;
+  }
+  
+  public ConcurrentMap<String, List<TaskAttemptCompletionEvent>> getAggregatorMap() {
+    return aggregatorMap;
+  }
 
   private static final Pattern ipPattern = // Pattern for matching ip
     Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
@@ -1293,6 +1319,20 @@ public abstract class TaskAttemptImpl implements
           taskAttempt.containerNodeId.getHost()).getNetworkLocation();
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();
+      
+      if (taskAttempt.isAggregationEnabled && 
+          taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
+        if (taskAttempt.shouldBeAggregator()) {
+          // TODO: remove setAggregationMode.
+          LOG.info("[MR-4502]Aggregator ID is" + taskAttempt.getID());
+          taskAttempt.getID().setAggregationMode(true);
+        } else {
+          LOG.info("[MR-4502] non Aggregator ID is" + taskAttempt.getID());
+          taskAttempt.getID().setAggregationMode(false);
+        }
+          
+      }
+      
       // this is a _real_ Task (classic Hadoop mapred flavor):
       taskAttempt.remoteTask = taskAttempt.createRemoteTask();
       taskAttempt.jvmID = new WrappedJvmID(
@@ -1466,6 +1506,7 @@ public abstract class TaskAttemptImpl implements
 
   private static class SucceededTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+    
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, 
@@ -1482,8 +1523,8 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.eventHandler.handle(jce);
       taskAttempt.logAttemptFinishedEvent(TaskAttemptStateInternal.SUCCEEDED);
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-          taskAttempt.attemptId,
-          TaskEventType.T_ATTEMPT_SUCCEEDED));
+        taskAttempt.attemptId,
+        TaskEventType.T_ATTEMPT_SUCCEEDED));
       taskAttempt.eventHandler.handle
       (new SpeculatorEvent
           (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
@@ -1555,6 +1596,30 @@ public abstract class TaskAttemptImpl implements
          eventHandler.handle(
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
     }
+  }
+  
+  public ArrayList<TaskAttemptCompletionEvent> getAggregationTargets() {
+    String hostname = this.nodeHttpAddress;
+    return aggregationWaitMap.get(hostname);
+  }
+
+  public boolean shouldBeAggregator() {
+    String hostname;
+    boolean shouldBeAggregator = false;
+    
+    if (aggregationWaitMap == null) {
+      LOG.warn("[BUG] aggregationWaitMap is null, this seems to be BUG. " +
+      		"taskAttemptId is :" + getID().toString());
+      return shouldBeAggregator;
+    }
+    
+    // FIXME: A bit dangerous.
+    hostname = this.nodeHttpAddress.split(":")[0];
+    
+    shouldBeAggregator = aggregationWaitMap.isAggregatable(hostname,
+        getID(), aggregationThreshold);
+    
+    return shouldBeAggregator;
   }
 
   private static class TooManyFetchFailureTransition implements
