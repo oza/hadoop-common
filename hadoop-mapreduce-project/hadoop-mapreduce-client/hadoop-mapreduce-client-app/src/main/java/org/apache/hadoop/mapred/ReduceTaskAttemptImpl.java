@@ -44,7 +44,7 @@ public class ReduceTaskAttemptImpl extends TaskAttemptImpl {
       Credentials credentials, Clock clock,
       AppContext appContext) {
     super(id, attempt, eventHandler, taskAttemptListener, jobFile, partition,
-        conf, new String[] {}, jobToken, credentials, clock,
+        conf, new String[] {}, jobToken, credentials, clock, null,
         appContext);
     this.numMapTasks = numMapTasks;
   }
