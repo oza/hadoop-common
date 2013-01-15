@@ -1645,8 +1645,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           }
         }
 
-          // here we could have simply called Task.getSuccessfulAttempt() but
-          // the event that triggers this code is sent before
+        // here we could have simply called Task.getSuccessfulAttempt() but
+        // the event that triggers this code is sent before
         // Task.successfulAttempt is set and so there is no guarantee that it
         // will be available now
         Task task = job.tasks.get(taskId);
@@ -1660,6 +1660,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           job.nodesToSucceededTaskAttempts.put(nodeId, taskAttemptIdList);
         }
         taskAttemptIdList.add(attempt.getID());
+      } else if (TaskAttemptCompletionEventStatus.FAILED.equals(tce.getStatus())
+    		|| TaskAttemptCompletionEventStatus.TIPFAILED.equals(tce.getStatus())
+    		|| TaskAttemptCompletionEventStatus.KILLED.equals(tce.getStatus())
+    		|| TaskAttemptCompletionEventStatus.OBSOLETE.equals(tce.getStatus())
+    		) {
+        // Error handling when tasks are failed or killed.
+        String taskIdString = taskId.toString();
+        job.aggregationWaitMap.abortAggregation(taskIdString);
+ 
+        if (job.noMoreAggregation()){
+          // This is final phase of map.
+          ArrayList<TaskAttemptCompletionEvent>events  = job.aggregationWaitMap.removeAllEvents();
+          for (TaskAttemptCompletionEvent ev:events) {
+            ev.setStatus(TaskAttemptCompletionEventStatus.SUCCEEDED);
+            job.mapAttemptCompletionEvents.add(ev);
+          }
+          shouldDispatchMapCompletionEvent = true;
+          LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
+        }
       }
       
       if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())
