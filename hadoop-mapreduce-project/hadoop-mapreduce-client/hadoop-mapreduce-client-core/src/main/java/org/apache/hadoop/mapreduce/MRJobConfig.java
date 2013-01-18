@@ -190,6 +190,14 @@ public interface MRJobConfig {
 
   public static final String MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
   public static final int DEFAULT_MAP_CPU_VCORES = 1;
+  
+  public static final String MAP_NODE_LEVEL_AGGREGATION_ENABLED
+    = "mapreduce.map.node-level-aggregation.enabled";
+  public static final boolean DEFAULT_MAP_NODE_LEVEL_AGGREGATION_ENABLED = false;
+  
+  public static final String MAP_NODE_LEVEL_AGGREGATION_THRESHOLD
+    = "mapreduce.map.node-level-aggregation.threshold";
+  public static final int DEFAULT_MAP_NODE_LEVEL_AGGREGATION_THRESHOLD = 128;
 
   public static final String MAP_ENV = "mapreduce.map.env";
 
