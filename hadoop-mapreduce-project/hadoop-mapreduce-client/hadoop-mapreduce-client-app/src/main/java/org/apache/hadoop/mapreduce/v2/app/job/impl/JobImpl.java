@@ -1673,7 +1673,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // MAPREDUCE-4902
         // if the succeeded attemptId is aggregation leader, 
         // put success events into successAttemptCompletionEventNoMap.
-        if (job.isAggregationEnabled) {
+        if (job.isAggregationEnabled && 
+            TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
           if (attemptId.isAggregating()) {
             LOG.info("[MR-4502] Aggregator succeeded to local aggregation.");
             String taskIdString = taskId.toString();
@@ -1685,7 +1686,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 // stop to fetch.
                 ev.setStatus(TaskAttemptCompletionEventStatus.AGGREGATED);
                 //job.taskAttemptCompletionEvents.add(ev);
-                job.mapAttemptCompletionEvents.add(ev);
+                job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(ev));
                 LOG.info("[MR-4502] event" + ev.getAttemptId().getId() + "is sent to Redcuer.");
                 shouldDispatchMapCompletionEvent = true;
               }
@@ -1735,7 +1736,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             ArrayList<TaskAttemptCompletionEvent>events  = job.aggregationWaitMap.removeAllEvents();
             for (TaskAttemptCompletionEvent ev:events) {
               ev.setStatus(TaskAttemptCompletionEventStatus.SUCCEEDED);
-              job.mapAttemptCompletionEvents.add(ev);
+              job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(tce));
             }
             shouldDispatchMapCompletionEvent = true;
             LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
@@ -1771,7 +1772,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           ArrayList<TaskAttemptCompletionEvent>events  = job.aggregationWaitMap.removeAllEvents();
           for (TaskAttemptCompletionEvent ev:events) {
             ev.setStatus(TaskAttemptCompletionEventStatus.SUCCEEDED);
-            job.mapAttemptCompletionEvents.add(ev);
+            job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(ev));
           }
           shouldDispatchMapCompletionEvent = true;
           LOG.info("[MR-4502] At " + attemptId.getTaskId() + ", MRAppMaster decided to stop aggregation.");
@@ -1780,7 +1781,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       
       if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())
           && shouldDispatchMapCompletionEvent) {
-        job.mapAttemptCompletionEvents.add(tce);
+        job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(tce));
       }
     }
   }
