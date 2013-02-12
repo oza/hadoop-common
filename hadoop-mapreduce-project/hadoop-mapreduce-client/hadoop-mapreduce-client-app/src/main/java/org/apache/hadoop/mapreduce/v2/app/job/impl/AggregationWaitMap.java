@@ -268,6 +268,33 @@ public class AggregationWaitMap {
     }
     return events;
   }
+
+  public void abortAggregation(String taskId) {
+    List<TaskAttemptCompletionEvent> events = null;
+    
+    writeLock.lock();
+    try {
+      if (taskToAggregated.get(taskId)) {
+        if (aggregatorMap.containsKey(taskId)) {
+          events = aggregatorMap.remove(taskId);
+          String hostname = taskToHostnameMap.remove(taskId);
+          taskToAggregated.put(taskId, new Boolean(false));
+          
+          if (!events.isEmpty() && aggregationWaitMap.containsKey(hostname)) {
+            List<TaskAttemptCompletionEvent> evs = aggregationWaitMap.get(hostname);
+            evs.addAll(events);
+          } else {
+            // TODO: throw IllegalStateException
+          }
+          LOG.info("[MR-4502] taskId " + taskId + " and hostname " + hostname + " is unbinded");
+        } else{
+            // TODO: throw IllegalStateException
+        }
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
   
   
   
