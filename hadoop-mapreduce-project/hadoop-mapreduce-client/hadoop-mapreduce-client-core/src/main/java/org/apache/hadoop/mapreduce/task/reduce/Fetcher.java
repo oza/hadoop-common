@@ -273,6 +273,10 @@ class Fetcher<K,V> extends Thread {
         scheduler.putBackKnownMapOutput(host, left);
       }
       
+      for(TaskAttemptID skipId: host.getAndClearSkippingMaps()) {
+        remaining.remove(skipId);
+      }
+      
       return;
     }
     
