@@ -19,10 +19,14 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.WrappedJvmID;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.AggregationWaitMap;
 
 /**
  * This class listens for changes to the state of a Task.
@@ -57,4 +61,6 @@ public interface TaskAttemptListener {
    */
   void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID);
 
+  // MR-4502
+  public void registerAggregationWaitMap(AggregationWaitMap aggregationWaitMap);
 }

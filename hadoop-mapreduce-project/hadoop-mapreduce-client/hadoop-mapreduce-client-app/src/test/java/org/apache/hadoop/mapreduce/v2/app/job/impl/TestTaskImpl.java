@@ -149,7 +149,7 @@ public class TestTaskImpl {
         Credentials credentials, Clock clock,
         AppContext appContext, TaskType taskType) {
       super(taskId, id, eventHandler, taskAttemptListener, jobFile, partition, conf,
-          dataLocations, jobToken, credentials, clock, appContext);
+          dataLocations, jobToken, credentials, clock, new AggregationWaitMap(), appContext);
       this.taskType = taskType;
     }
 
