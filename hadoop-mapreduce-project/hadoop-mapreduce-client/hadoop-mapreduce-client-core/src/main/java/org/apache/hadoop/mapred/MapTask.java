@@ -57,6 +57,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -335,13 +336,28 @@ public class MapTask extends Task {
       return;
     }
 
+
     if (useNewApi) {
       runNewMapper(job, splitMetaInfo, umbilical, reporter);
     } else {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
+ 
     done(umbilical, reporter);
   }
+
+  /**
+  void runAggregation(job, umbilical, reporter) {
+    try {
+      combine()
+      aggregationSuccess();
+    } finally {
+      releaseAggregationLeader()
+      // in this case, aggregationError is reported to MRAppMaster.
+      aggregationError();
+    }
+  }
+   */
 
   public Progress getSortPhase() {
     return sortPhase;
@@ -386,7 +402,7 @@ public class MapTask extends Task {
                         MapOutputBuffer.class, MapOutputCollector.class), job);
     LOG.info("Map output collector class = " + collector.getClass().getName());
     MapOutputCollector.Context context =
-                           new MapOutputCollector.Context(this, job, reporter);
+                           new MapOutputCollector.Context(this, job, reporter, umbilical);
     collector.init(context);
     return collector;
   }
@@ -419,7 +435,7 @@ public class MapTask extends Task {
     } else { 
       collector = new DirectMapOutputCollector<OUTKEY, OUTVALUE>();
        MapOutputCollector.Context context =
-                           new MapOutputCollector.Context(this, job, reporter);
+                           new MapOutputCollector.Context(this, job, reporter, umbilical);
       collector.init(context);
     }
     MapRunnable<INKEY,INVALUE,OUTKEY,OUTVALUE> runner =
@@ -912,6 +928,7 @@ public class MapTask extends Task {
     private MapOutputFile mapOutputFile;
     private Progress sortPhase;
     private Counters.Counter spilledRecordsCounter;
+    private TaskUmbilicalProtocol umbilical;
 
     public MapOutputBuffer() {
     }
@@ -922,6 +939,7 @@ public class MapTask extends Task {
       job = context.getJobConf();
       reporter = context.getReporter();
       mapTask = context.getMapTask();
+      umbilical = context.getUmbilical();
       mapOutputFile = mapTask.getMapOutputFile();
       sortPhase = mapTask.getSortPhase();
       spilledRecordsCounter = reporter.getCounter(TaskCounter.SPILLED_RECORDS);
@@ -1479,9 +1497,166 @@ public class MapTask extends Task {
       }
       // release sort buffer before the merge
       kvbuffer = null;
-      mergeParts();
+      boolean needToCompleteSortPhase = mergeParts();
       Path outputPath = mapOutputFile.getOutputFile();
       fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
+      
+      // MR-4502: Start node-level Aggregation.
+      TaskAttemptID[] aggregationTargets = umbilical.getAggregationTargets(getTaskID()).getAggregationTargets();
+      
+      if (aggregationTargets.length > 1) {
+        // Start to aggregation.
+        runAggregation(outputPath, aggregationTargets);
+      } else {
+        LOG.info("[MR-4502]: I'm NOT aggregator... ID is:" + getTaskID());
+        //umbilical.cancelAggregation(getTaskID());
+      }
+      
+      if (needToCompleteSortPhase) {
+        sortPhase.complete();
+      }      
+      
+    }
+    
+    private void runAggregation(Path outputPath, TaskAttemptID[] aggregationTargets) {
+      String basePath = job.get(MRConfig.LOCAL_DIR);
+      LOG.info("[MR-4502]: I'm aggregator! Start to aggregatte local IFiles." +
+      		"LOCAL_DIR is :" + basePath);
+      long finalOutFileSize = 0;
+      int finalIndexFileSize = partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH;
+      FSDataOutputStream finalOut = null;
+      
+
+      final String baseOutputPathName = outputPath.getParent() + Path.SEPARATOR;
+      final String tmpOutputPathName = baseOutputPathName + outputPath.getName() + ".tmp";
+      final String indexOutputPathName = baseOutputPathName  + outputPath.getName() + 
+          MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING;
+      LOG.info("[MR-4502] tmpOutputPathName: " + tmpOutputPathName +
+          ", indexOutputPathName: " + indexOutputPathName);
+      try {
+        sameVolRename(outputPath, new Path(tmpOutputPathName));
+        sameVolRename(new Path(indexOutputPathName),
+            new Path(tmpOutputPathName + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING));
+      } catch (IOException e1) {
+        // TODO handle exception
+        e1.printStackTrace();
+        LOG.error(e1 + ", dstPathName is " + tmpOutputPathName);
+      }
+      
+      File[] files = createInputFilesFromTaskAttempts(basePath, 
+          tmpOutputPathName, aggregationTargets);
+      Path[] indexFileName = createIndexFilesFromFiles(files);
+      
+      Path filename[] = new Path[files.length];
+      try {
+        for(int i = 0; i < files.length; i++) {
+          filename[i] = new Path(files[i].getPath());
+          finalOutFileSize += rfs.getFileStatus(filename[i]).getLen();
+        }
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      
+      try {
+        Path finalIndexFile =
+          mapOutputFile.getOutputIndexFileForWrite(finalIndexFileSize);
+        Path finalOutputFile =
+            mapOutputFile.getOutputFileForWrite(finalOutFileSize);
+        finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
+        finalOut = rfs.create(finalOutputFile, true, 4096);
+
+        sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
+        Merger.considerFinalMergeForProgress();
+
+        IndexRecord rec = new IndexRecord();
+        final SpillRecord spillRec = new SpillRecord(partitions);
+
+        for (int parts = 0; parts < partitions; parts++) {
+          //create the segments to be merged
+          List<Segment<K,V>> segmentList =
+              new ArrayList<Segment<K, V>>(files.length);
+          for(int i = 0; i < files.length; i++) {
+            IndexRecord indexRecord = new SpillRecord(indexFileName[i], job).getIndex(parts);
+
+            Segment<K,V> s =
+                new Segment<K,V>(job, rfs, filename[i], indexRecord.startOffset,
+                    indexRecord.partLength, codec, true);
+            segmentList.add(i, s);
+          }
+
+          int mergeFactor = job.getInt(JobContext.IO_SORT_FACTOR, 100);
+          // sort the segments only if there are intermediate merges
+          boolean sortSegments = segmentList.size() > mergeFactor;
+          final TaskAttemptID mapId = getTaskID();
+          //merge
+          @SuppressWarnings("unchecked")
+          RawKeyValueIterator kvIter = Merger.merge(job, rfs,
+              keyClass, valClass, codec,
+              segmentList, mergeFactor,
+              new Path(mapId.toString()),
+              job.getOutputKeyComparator(), reporter, sortSegments,
+              null, spilledRecordsCounter, sortPhase.phase());
+
+          //write merged output to disk
+          long segmentStart = finalOut.getPos();
+          Writer<K, V> writer =
+              new Writer<K, V>(job, finalOut, keyClass, valClass, codec,
+                  spilledRecordsCounter);
+          if (combinerRunner == null) {
+            Merger.writeFile(kvIter, writer, reporter, job);
+          } else {
+            combineCollector.setWriter(writer);
+            combinerRunner.combine(kvIter, combineCollector);
+          }
+
+          //close
+          writer.close();
+          sortPhase.startNextPhase();
+
+          // record offsets
+          rec.startOffset = segmentStart;
+          rec.rawLength = writer.getRawLength();
+          rec.partLength = writer.getCompressedLength();
+          spillRec.putIndex(rec, parts);
+          
+          writer = null;
+        }
+        spillRec.writeToFile(finalIndexFile, job);
+        finalOut.close();
+        //sortPhase.complete();
+
+      } catch(Exception e) {
+        // TODO Implement this method!
+        LOG.error(e.toString());
+        // TODO: for fast recovery
+        //sameVolRename(new Path(dstPathName), outputPath);
+      }
+
+    }
+
+    private Path[] createIndexFilesFromFiles(File[] files) {
+      Path paths[] = new Path[files.length];
+      for (int i = 0; i < files.length; i++) {
+        paths[i] = new Path(files[i].getAbsolutePath() + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING);
+      }
+      return paths;
+    }
+
+    private File[] createInputFilesFromTaskAttempts(String basePath,
+        String dstPathName, TaskAttemptID[] aggregationTargets) {
+      final String outputDirName = basePath + Path.SEPARATOR + "output" + Path.SEPARATOR;
+      File[] files = new File[aggregationTargets.length+1];
+      int i = 0;
+      
+      for (TaskAttemptID attemptID : aggregationTargets) {
+        files[i] = new File(outputDirName + attemptID.toString() +
+            Path.SEPARATOR + MapOutputFile.MAP_OUTPUT_FILENAME_STRING);
+        i++;
+      }
+      files[i] = new File(dstPathName);
+      
+      return files;
     }
 
     public void close() { }
@@ -1780,7 +1955,7 @@ public class MapTask extends Task {
       public void close() { }
     }
 
-    private void mergeParts() throws IOException, InterruptedException, 
+    private boolean mergeParts() throws IOException, InterruptedException, 
                                      ClassNotFoundException {
       // get the approximate size of the final output/index files
       long finalOutFileSize = 0;
@@ -1802,8 +1977,9 @@ public class MapTask extends Task {
           indexCacheList.get(0).writeToFile(
             mapOutputFile.getOutputIndexFileForWriteInVolume(filename[0]), job);
         }
-        sortPhase.complete();
-        return;
+        // MR-4502 this must be lazy.
+        // sortPhase.complete();
+        return true;
       }
 
       // read in paged indices
@@ -1843,8 +2019,9 @@ public class MapTask extends Task {
         } finally {
           finalOut.close();
         }
-        sortPhase.complete();
-        return;
+        // MR-4502 this must be lazy.
+        //sortPhase.complete();
+        return true;
       }
       {
         sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
@@ -1912,6 +2089,7 @@ public class MapTask extends Task {
           rfs.delete(filename[i],true);
         }
       }
+      return false;
     }
     
     /**
