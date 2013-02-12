@@ -38,10 +38,12 @@ import org.apache.hadoop.yarn.event.EventHandler;
 public class MapTaskImpl extends TaskImpl {
 
   private final TaskSplitMetaInfo taskSplitMetaInfo;
+  private AggregationWaitMap aggregationWaitMap;
 
   public MapTaskImpl(JobId jobId, int partition, EventHandler eventHandler,
       Path remoteJobConfFile, JobConf conf,
       TaskSplitMetaInfo taskSplitMetaInfo,
+      AggregationWaitMap aggregationWaitMap,
       TaskAttemptListener taskAttemptListener,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
@@ -50,8 +52,9 @@ public class MapTaskImpl extends TaskImpl {
         conf, taskAttemptListener, jobToken, credentials, clock,
         appAttemptId, metrics, appContext);
     this.taskSplitMetaInfo = taskSplitMetaInfo;
+    this.aggregationWaitMap = aggregationWaitMap;
   }
-
+  
   @Override
   protected int getMaxAttempts() {
     return conf.getInt(MRJobConfig.MAP_MAX_ATTEMPTS, 4);
@@ -62,7 +65,9 @@ public class MapTaskImpl extends TaskImpl {
     return new MapTaskAttemptImpl(getID(), nextAttemptNumber,
         eventHandler, jobFile,
         partition, taskSplitMetaInfo, conf, taskAttemptListener,
-        jobToken, credentials, clock, appContext);
+        jobToken, credentials, clock, aggregationWaitMap,
+        appContext)
+      .registerAggregatorMap(aggregatorMap);
   }
 
   @Override
