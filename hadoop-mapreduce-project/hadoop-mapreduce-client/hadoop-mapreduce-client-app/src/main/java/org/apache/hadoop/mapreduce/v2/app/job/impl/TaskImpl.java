@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -270,6 +271,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         }
       };
 
+  protected ConcurrentMap<String, List<TaskAttemptCompletionEvent>> aggregatorMap;
+
   @Override
   public TaskState getState() {
     readLock.lock();
@@ -320,6 +323,11 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     // over-step the current one. This assumes that a task won't have more
     // than 1000 attempts in its single generation, which is very reasonable.
     nextAttemptNumber = (appAttemptId - 1) * 1000;
+  }
+  
+  public TaskImpl registerAggregatorMap(ConcurrentMap<String, List<TaskAttemptCompletionEvent>> map){ 
+    aggregatorMap = map;
+    return this;
   }
 
   @Override
