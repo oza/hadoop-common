@@ -201,4 +201,37 @@ public class TestJobConf {
       jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts()
       );
   }
+  
+  /**
+   * Ensure that by default JobContext.MAX_TASK_FAILURES_PER_TRACKER is less
+   * JobContext.MAP_MAX_ATTEMPTS and JobContext.REDUCE_MAX_ATTEMPTS so that
+   * failed tasks will be retried on other nodes
+   */
+  
+  /*
+   * Test that negative values for MAPRED_TASK_MAXVMEM_PROPERTY cause
+   * new configuration keys' values to be used.
+   */
+  @Test
+  public void testNodeLevelAggregation() {
+    JobConf jobConf = new JobConf(true);
+    Assert.assertEquals("By default MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED" +
+    		"should be set false", jobConf.getNodeLevelAggregation(), false);
+    Assert.assertEquals("By default MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED" +
+    		"should be set 128", jobConf.getNodeLevelAggregationThreshold(), 128);
+    
+    jobConf.setNodeLevelAggregation(true);
+    Assert.assertEquals(jobConf.getNodeLevelAggregation(), true);
+    
+    jobConf.setNodeLevelAggregationThreshold(1024);
+    Assert.assertEquals(jobConf.getNodeLevelAggregationThreshold(), 1024);
+    jobConf.setNodeLevelAggregationThreshold(-1024);
+    Assert.assertEquals(jobConf.getNodeLevelAggregationThreshold(), 2);
+    jobConf.setNodeLevelAggregationThreshold(0);
+    Assert.assertEquals(jobConf.getNodeLevelAggregationThreshold(), 2);
+    jobConf.setNodeLevelAggregationThreshold(1);
+    Assert.assertEquals(jobConf.getNodeLevelAggregationThreshold(), 2);
+    jobConf.setNodeLevelAggregationThreshold(2);
+    Assert.assertEquals(jobConf.getNodeLevelAggregationThreshold(), 2);
+  }
 }
