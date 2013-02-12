@@ -1487,6 +1487,75 @@ public class JobConf extends Configuration {
     
     return hostadd;
   }
+  
+  /**
+   * Set whether the frame work should do node-level aggregation
+   * using combiner is at the end stage of mappers. To enable this
+   * feature, you must specify combiner class by using {@link #setCombinerClass(Class)}
+   * method. Usage example is as follows:
+   *
+   * <p><blockquote><pre>
+   * job.setCombinerClass(ReducerClass.class);
+   * job.setNodeLevelAggrgation(true);
+   * job.setNodeLevelAggrgationThreshold(128);
+   * </pre></blockquote></p>
+   * 
+   * @see #setNodeLevelAggregationThreshold(int)
+   * @param flag <code>true</code> if framework should launch 
+   *        node-level combiner, <code>false</code> otherwise.
+   */
+  public void setNodeLevelAggregation(boolean flag) {
+    setBoolean(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED, flag);
+  }
+  
+  /**
+   * Get whether node-level aggregation is enabled.
+   * 
+   * @see #setNodeLevelAggregation(boolean)
+   * @return true if node-level aggregation is enabled,
+   *         false otherwise.
+   */
+  public boolean getNodeLevelAggregation() {
+    return getBoolean(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED,
+        MRJobConfig.DEFAULT_MAP_NODE_LEVEL_AGGREGATION_ENABLED);
+  }
+  
+  /**
+   * Set threshold for node-level aggregation.
+   * If the numbers of intermediate file reach the <code>threshold</code>,
+   * MRAppMaster indicates the nodes to launch node-level combiner.
+   * Usage example is as follows:
+   * 
+   * <p><blockquote><pre>
+   * job.setCombinerClass(ReducerClass.class);
+   * job.setNodeLevelAggrgation(true);
+   * job.setNodeLevelAggrgationThreshold(128);
+   * </pre></blockquote></p>
+   * 
+   * If the <code>threshold</code> is given below 2, the value roll up to 2.
+   * 
+   * @see #setNodeLevelAggregation(boolean)
+   * @param threshold value for node-level aggregation.
+   *        Default value is 128.
+   */
+  public void setNodeLevelAggregationThreshold(int threshold) {
+    if (threshold <= 2) {
+      threshold = 2;
+    }
+    setInt(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_THRESHOLD, threshold);
+  }
+  
+  /**
+   * Get threshold for node-level aggregation.
+   * 
+   * @see #setNodeLevelAggregationThreshold(int)
+   * @return threshold value for node-level aggregation.
+   *         Default value is 128.
+   */
+  public int getNodeLevelAggregationThreshold() {
+    return getInt(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_THRESHOLD,
+        MRJobConfig.DEFAULT_MAP_NODE_LEVEL_AGGREGATION_THRESHOLD);
+  }
 
   /**
    * Get whether the task profiling is enabled.
@@ -1706,7 +1775,7 @@ public class JobConf extends Configuration {
   public void setMemoryForMapTask(long mem) {
     setLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, mem);
   }
-
+  
   /**
    * Get memory required to run a reduce task of the job, in MB.
    * 
@@ -1940,7 +2009,6 @@ public class JobConf extends Configuration {
       LOG.warn(JobConf.deprecatedString(JobConf.MAPRED_REDUCE_TASK_ULIMIT));
     }
   }
-  
 
 }
 
