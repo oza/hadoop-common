@@ -24,6 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.BooleanWritable;
 
 /**
  * TaskAttemptID represents the immutable and unique identifier for 
@@ -50,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
   protected static final String ATTEMPT = "attempt";
   private TaskID taskId;
+  private final BooleanWritable isAggregating;
   
   /**
    * Constructs a TaskAttemptID object from given {@link TaskID}.  
@@ -62,6 +64,7 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
       throw new IllegalArgumentException("taskId cannot be null");
     }
     this.taskId = taskId;
+    isAggregating = new BooleanWritable(false);
   }
   
   /**
@@ -79,6 +82,7 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
   
   public TaskAttemptID() { 
     taskId = new TaskID();
+    isAggregating = new BooleanWritable(false);
   }
   
   /** Returns the {@link JobID} object that this task attempt belongs to */
@@ -101,6 +105,15 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
   public TaskType getTaskType() {
     return taskId.getTaskType();
   }
+  
+  public Boolean getAggregatingFlag() {
+    return isAggregating.get();
+  }
+  
+  public void setAggregatingFlag(Boolean isAggregating) {
+    this.isAggregating.set(isAggregating);
+  }
+  
   @Override
   public boolean equals(Object o) {
     if (!super.equals(o))
@@ -123,12 +136,14 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     taskId.readFields(in);
+    isAggregating.readFields(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
     taskId.write(out);
+    isAggregating.write(out);
   }
 
   @Override

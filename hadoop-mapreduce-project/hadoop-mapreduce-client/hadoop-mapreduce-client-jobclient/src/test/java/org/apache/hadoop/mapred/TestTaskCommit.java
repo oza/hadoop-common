@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -168,6 +169,14 @@ public class TestTaskCommit extends HadoopTestCase {
         long clientVersion, int clientMethodsHash) throws IOException {
       return null;
     }
+
+    @Override
+    public AggregationTarget getAggregationTargets(TaskAttemptID aggregator)
+        throws IOException {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
   }
   
   /**

@@ -51,6 +51,7 @@ enum TaskStateProto {
   TS_SUCCEEDED = 4;
   TS_FAILED = 5;
   TS_KILLED = 6;
+  TS_AGGREGATED = 7;
 }
 
 enum PhaseProto {
@@ -162,6 +163,7 @@ enum TaskAttemptCompletionEventStatusProto {
   TACE_SUCCEEDED = 3;
   TACE_OBSOLETE = 4;
   TACE_TIPFAILED = 5;
+  TACE_AGGREGATED = 6;
 }
 
 message TaskAttemptCompletionEventProto {
