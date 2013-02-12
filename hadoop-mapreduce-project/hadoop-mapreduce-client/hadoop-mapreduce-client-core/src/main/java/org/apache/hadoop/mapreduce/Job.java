@@ -845,6 +845,49 @@ public class Job extends JobContextImpl implements JobContext {
     conf.setClass(PARTITIONER_CLASS_ATTR, cls, 
                   Partitioner.class);
   }
+  
+  /**
+   * Set whether the frame work should do node-level aggregation
+   * using combiner is at the end stage of mappers. To enable this
+   * feature, you must specify combiner class by using {@link #setCombinerClass(Class)}
+   * method. Usage example is as follows:
+   *
+   * <p><blockquote><pre>
+   * job.setCombinerClass(ReducerClass.class);
+   * job.setNodeLevelAggrgation(true);
+   * job.setNodeLevelAggrgationThreshold(128);
+   * </pre></blockquote></p>
+   * 
+   * @see #setNodeLevelAggregationThreshold(int)
+   * @param flag <code>true</code> if framework should launch 
+   *        node-level combiner, <code>false</code> otherwise.
+   */
+  public void setNodeLevelAggregation(boolean flag) {
+    conf.setBoolean(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED, flag);
+  }
+  
+  /**
+   * Set threshold for node-level aggregation.
+   * If the numbers of intermediate file reach the <code>threshold</code>,
+   * MRAppMaster indicates the nodes to launch node-level combiner.
+   * Usage example is as follows:
+   * 
+   * <p><blockquote><pre>
+   * job.setCombinerClass(ReducerClass.class);
+   * job.setNodeLevelAggrgation(true);
+   * job.setNodeLevelAggrgationThreshold(128);
+   * </pre></blockquote></p>
+   * 
+   * Note that minimum number of <code>threshold</code> is 2.
+   * If the <code>threshold</code> is given below 2, the value roll up to 2.
+   * 
+   * @see #setNodeLevelAggregation(boolean)
+   * @param threshold value for node-level aggregation.
+   *        Default value is 128.
+   */
+  public void setNodeLevelAggregationThreshold(int threshold) {
+    conf.setInt(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_THRESHOLD, threshold);
+  }
 
   /**
    * Set the key class for the map output data. This allows the user to
