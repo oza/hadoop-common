@@ -43,11 +43,14 @@ public interface MapOutputCollector<K, V> {
     private final MapTask mapTask;
     private final JobConf jobConf;
     private final TaskReporter reporter;
+    private final TaskUmbilicalProtocol umbilical;
 
-    public Context(MapTask mapTask, JobConf jobConf, TaskReporter reporter) {
+    public Context(MapTask mapTask, JobConf jobConf, TaskReporter reporter,
+    		TaskUmbilicalProtocol umbilical) {
       this.mapTask = mapTask;
       this.jobConf = jobConf;
       this.reporter = reporter;
+      this.umbilical = umbilical;
     }
 
     public MapTask getMapTask() {
@@ -61,5 +64,9 @@ public interface MapOutputCollector<K, V> {
     public TaskReporter getReporter() {
       return reporter;
     }
+
+	public TaskUmbilicalProtocol getUmbilical() {
+		return umbilical;
+	}
   }
 }

@@ -201,6 +201,8 @@ public class TypeConverter {
       return TaskCompletionEvent.Status.SUCCEEDED;
     case TIPFAILED:
       return TaskCompletionEvent.Status.TIPFAILED;
+    case AGGREGATED:
+      return TaskCompletionEvent.Status.AGGREGATED;
     }
     throw new YarnRuntimeException("Unrecognized status: " + newStatus);
   }

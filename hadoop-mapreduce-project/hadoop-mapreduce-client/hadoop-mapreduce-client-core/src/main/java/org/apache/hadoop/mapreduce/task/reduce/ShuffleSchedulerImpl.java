@@ -154,6 +154,14 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       LOG.info("Ignoring output of failed map TIP: '" +
           event.getTaskAttemptId() + "'");
       break;
+    case AGGREGATED:
+      u = getBaseURI(event.getTaskTrackerHttp());
+      scheduler.skip(u.getHost() + ":" + u.getPort(),
+          u.toString(),
+          event.getTaskAttemptId().getTaskID(), event.getTaskAttemptId());
+      LOG.info("Ignoring output of aggregated its outputs: '" +
+          " aggregated: '" + event.getTaskAttemptId() + "'");
+      break;
     }
   }
 

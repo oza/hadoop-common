@@ -40,6 +40,7 @@ public class MapHost {
   private final String hostName;
   private final String baseUrl;
   private List<TaskAttemptID> maps = new ArrayList<TaskAttemptID>();
+  private List<TaskAttemptID> skipping = new ArrayList<TaskAttemptID>();
   
   public MapHost(String hostName, String baseUrl) {
     this.hostName = hostName;
@@ -56,6 +57,16 @@ public class MapHost {
 
   public String getBaseUrl() {
     return baseUrl;
+  }
+  
+  public synchronized void addSkippingMap(TaskAttemptID mapId) {
+    skipping.add(mapId);
+  }
+  
+  public List<TaskAttemptID> getAndClearSkippingMaps() {
+    List<TaskAttemptID> currentKnownMaps = skipping;
+    maps = new ArrayList<TaskAttemptID>();
+    return currentKnownMaps;
   }
 
   public synchronized void addKnownMap(TaskAttemptID mapId) {
