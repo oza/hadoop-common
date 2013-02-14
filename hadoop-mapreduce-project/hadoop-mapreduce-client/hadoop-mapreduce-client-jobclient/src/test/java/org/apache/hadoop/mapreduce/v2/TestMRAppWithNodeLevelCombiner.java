@@ -48,6 +48,11 @@ import org.junit.Test;
  * and check for correct classpath
  */
 public class TestMRAppWithNodeLevelCombiner {
+  MiniDFSCluster dfs = null;
+  MiniDistributedMRYarnCluster mrCluster = null;
+  FileSystem localFs = null;
+  FileSystem remoteFs = null;
+
   
   void configureWordCount(FileSystem fs, JobConf conf, String input,
       int numMaps, int numReduces, Path inDir, Path outDir) throws IOException {
@@ -110,13 +115,8 @@ public class TestMRAppWithNodeLevelCombiner {
   }
   
   @Test
-  public void testNodeLevelCombiner()
+  public void testNodeLevelCombinerWithSingleReducer()
       throws IOException {
-
-    MiniDFSCluster dfs = null;
-    MiniDistributedMRYarnCluster mrCluster = null;
-    FileSystem localFs = null;
-    FileSystem remoteFs = null;
     final int numMaps = 5;
     final int numReds = 1;
 
@@ -155,6 +155,55 @@ public class TestMRAppWithNodeLevelCombiner {
           + "quick\t" + Integer.toString(1*numMaps) + "\n"
           + "red\t" + Integer.toString(1*numMaps) + "\n"
           + "silly\t"+ Integer.toString(1*numMaps) + "\n" 
+          + "sox\t" + Integer.toString(1*numMaps) + "\n", result);
+
+    } finally {
+      if (dfs != null) { dfs.shutdown(); }
+      if (mrCluster != null) { mrCluster.stop(); }
+    }
+  }
+  
+  @Test
+  public void testNodeLevelCombinerWithMultipleReducers()
+      throws IOException {
+    final int numMaps = 5;
+    final int numReds = 3;
+    
+    try {
+      Configuration conf = new Configuration();
+      localFs = FileSystem.getLocal(conf);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+          .format(true).racks(null).build();
+      remoteFs = dfs.getFileSystem();
+      mrCluster = new MiniDistributedMRYarnCluster(TestMRAppWithNodeLevelCombiner.class.getName(), 3);
+      conf.set("fs.defaultFS", remoteFs.getUri().toString());   // use HDFS
+      conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/apps_staging_dir");
+      conf.setBoolean(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED, true);
+      conf.setInt(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_THRESHOLD, 2);
+      mrCluster.init(conf);
+      mrCluster.start();
+      Path TEST_ROOT_DIR = new Path("target",
+          TestMRJobs.class.getName() + "-tmpDir")
+          .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
+      Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
+      // Copy MRAppJar and make it private. TODO: FIXME. This is a hack to
+      // workaround the absent public discache.
+      localFs.copyFromLocalFile(new Path(MiniMRYarnCluster.APPJAR), APP_JAR);
+      localFs.setPermission(APP_JAR, new FsPermission("700"));
+      
+      JobConf jobConf = new JobConf(mrCluster.getConfig());
+
+      String result;
+      result = launchWordCount(remoteFs.getUri(), jobConf,
+          "The quick brown fox\nhas many silly\n" + "red fox sox\n", numMaps, numReds);
+      Assert.assertEquals("many\t" + Integer.toString(1*numMaps) + "\n"
+          + "silly\t"  + Integer.toString(1*numMaps) + "\n"
+          + "brown\t" + Integer.toString(1*numMaps) + "\n"
+          + "fox\t" + Integer.toString(2*numMaps) + "\n"
+          + "red\t" + Integer.toString(1*numMaps) + "\n"
+          + "The\t" + Integer.toString(1*numMaps) + "\n"
+          + "has\t" + Integer.toString(1*numMaps) + "\n"
+          + "quick\t"+ Integer.toString(1*numMaps) + "\n" 
           + "sox\t" + Integer.toString(1*numMaps) + "\n", result);
 
     } finally {
