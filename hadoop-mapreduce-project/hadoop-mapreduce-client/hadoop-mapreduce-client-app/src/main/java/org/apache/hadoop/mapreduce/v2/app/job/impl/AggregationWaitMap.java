@@ -94,6 +94,9 @@ public class AggregationWaitMap {
     try {
       if (aggregationWaitMap.containsKey(hostname)) {
         ArrayList<TaskAttemptCompletionEvent> ary = aggregationWaitMap.get(hostname);
+        if (ary == null) {
+          ary = new ArrayList<TaskAttemptCompletionEvent>(); 
+        }
         ary.add(ev);
       } else {
         ArrayList<TaskAttemptCompletionEvent> ary = new ArrayList<TaskAttemptCompletionEvent>();
@@ -134,10 +137,13 @@ public class AggregationWaitMap {
   }
   
   public Set<Entry<String, ArrayList<TaskAttemptCompletionEvent>>> entrySet() {
+    Set<Entry<String, ArrayList<TaskAttemptCompletionEvent>>> set = null;
     readLock.lock();
-    Set<Entry<String, ArrayList<TaskAttemptCompletionEvent>>> set = 
-        aggregationWaitMap.entrySet();
-    readLock.unlock();
+    try {
+      set = aggregationWaitMap.entrySet();
+    } finally {
+      readLock.unlock();
+    }
     
     return set;
   }
@@ -147,7 +153,9 @@ public class AggregationWaitMap {
     try {
       if (aggregationWaitMap.contains(hostname)) {
         ArrayList<TaskAttemptCompletionEvent> ary = aggregationWaitMap.get(hostname);
-        ary.clear();
+        if (ary != null) {
+          ary.clear();
+        }
       } 
     } finally {
       writeLock.unlock();
@@ -177,24 +185,31 @@ public class AggregationWaitMap {
       if (aggregatorMap.containsKey(taskId)) {
         events = aggregatorMap.get(taskId) ;
 
-        if (events.size() > 1) {
+        if (events != null && events.size() > 1) {
           for(TaskAttemptCompletionEvent ev:events){
             TaskAttemptID attemptID = TypeConverter.fromYarn(ev.getAttemptId());
             aggregationTargets.add(attemptID);
           }
-          taskToAggregated.put(taskId, new Boolean(true));
+          taskToAggregated.put(taskId, Boolean.valueOf(true));
           LOG.info("[MR-4502] events.size: " + events.size());
         } else {
           // Dummy 
           aggregationTargets.add(aggregator);
 
           String hostname = getHostname(taskId);
-          ArrayList<TaskAttemptCompletionEvent> ary = aggregationWaitMap.get(hostname);
-          if (ary.isEmpty()) {
+          ArrayList<TaskAttemptCompletionEvent> ary = null;
+          if (aggregationWaitMap.containsKey(hostname)) {
+            ary = aggregationWaitMap.get(hostname);
+          } 
+          
+          if (ary == null) {
             ary = new ArrayList<TaskAttemptCompletionEvent>();
           }
-          for (TaskAttemptCompletionEvent ev:events) {
-            ary.add(ev);
+
+          if (events != null) {
+            for (TaskAttemptCompletionEvent ev:events) {
+              ary.add(ev);
+            }
           }
         }
       } else {
@@ -211,7 +226,6 @@ public class AggregationWaitMap {
   public boolean isAggregatable(String hostname,
       TaskAttemptId id, int aggregationThreshold) {
     boolean isAggregatable = false;
-    // TODO Auto-generated method stub
     LOG.info("[MR-4502] hostname: " + hostname);
     LOG.info("[MR-4502] check aggregationWaitMap :" + aggregationWaitMap.containsKey(hostname));
     
@@ -219,8 +233,8 @@ public class AggregationWaitMap {
     try {
       if (aggregationWaitMap.containsKey(hostname)) {
         ArrayList<TaskAttemptCompletionEvent> list = aggregationWaitMap.get(hostname);
-        LOG.info("[MR-4502]" + " hostname is " + hostname + "list size is: " + list.size());
-        if (list != null && (list.size() > aggregationThreshold)) {
+        if (list != null && list.size() > aggregationThreshold) {
+          LOG.info("[MR-4502]" + " hostname is " + hostname + "list size is: " + list.size());
           if (!aggregatorMap.containsKey(hostname)) {
             ArrayList<TaskAttemptCompletionEvent> events = aggregationWaitMap.remove(hostname);
             String taskId = id.getTaskId().toString();
@@ -229,7 +243,7 @@ public class AggregationWaitMap {
               taskToHostnameMap.put(taskId, hostname);
               aggregatorMap.put(taskId, events);
               isAggregatable = true;
-              taskToAggregated.put(taskId, new Boolean(false));
+              taskToAggregated.put(taskId, Boolean.valueOf(false));
             } else {
               LOG.info("[MR-4502] The task id is already used! taskId: " + taskId + ", hostname: " + hostname);
             }
@@ -262,11 +276,15 @@ public class AggregationWaitMap {
     List<TaskAttemptCompletionEvent> events = null;
     writeLock.lock();
     try {
-      if (!taskToAggregated.get(taskId)) {
+      Boolean aggregated = taskToAggregated.get(taskId);
+      if (aggregated != null && (!aggregated)) {
         events = aggregatorMap.remove(taskId);
         String hostname = taskToHostnameMap.remove(taskId);
         if (aggregationWaitMap.containsKey(hostname)) {
           ArrayList<TaskAttemptCompletionEvent> evs = aggregationWaitMap.get(hostname);
+          if (evs == null) {
+            evs = new ArrayList<TaskAttemptCompletionEvent>();
+          }
           evs.addAll(events);
         } else {
           ArrayList<TaskAttemptCompletionEvent> evs = new ArrayList<TaskAttemptCompletionEvent>();
@@ -290,31 +308,37 @@ public class AggregationWaitMap {
   public void abortAggregation(String taskId) {
     List<TaskAttemptCompletionEvent> events = null;
     
+    
     writeLock.lock();
     try {
-      if (taskToAggregated.get(taskId)) {
-        if (aggregatorMap.containsKey(taskId)) {
+      Boolean aggregated = taskToAggregated.get(taskId);
+      if (aggregated != null && aggregated) {
+        if (aggregatorMap.containsKey(taskId)
+            && taskToHostnameMap.containsKey(taskId)) {
           events = aggregatorMap.remove(taskId);
           String hostname = taskToHostnameMap.remove(taskId);
-          taskToAggregated.put(taskId, new Boolean(false));
+          taskToAggregated.put(taskId, Boolean.valueOf(false));
           
-          if (!events.isEmpty() && aggregationWaitMap.containsKey(hostname)) {
+          if (events != null && events.isEmpty() && aggregationWaitMap.containsKey(hostname)) {
             List<TaskAttemptCompletionEvent> evs = aggregationWaitMap.get(hostname);
-            evs.addAll(events);
+            if (evs == null) {
+              evs = new ArrayList<TaskAttemptCompletionEvent>();
+            }
+            if (evs.isEmpty()) {
+              evs.addAll(events);
+            }
           } else {
-            // TODO: throw IllegalStateException
+            throw new IllegalStateException("AggregationWaitMap is in unexpected state.");
           }
           LOG.info("[MR-4502] taskId " + taskId + " and hostname " + hostname + " is unbinded");
         } else{
-            // TODO: throw IllegalStateException
+          throw new IllegalStateException("AggregationWaitMap is in unexpected state.");
         }
       }
     } finally {
       writeLock.unlock();
     }
   }
-  
-  
   
 
 }
