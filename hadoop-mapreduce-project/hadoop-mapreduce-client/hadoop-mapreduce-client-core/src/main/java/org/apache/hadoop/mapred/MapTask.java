@@ -1518,7 +1518,8 @@ public class MapTask extends Task {
       
     }
     
-    private void runAggregation(Path outputPath, TaskAttemptID[] aggregationTargets) {
+    private void runAggregation(Path outputPath, TaskAttemptID[] aggregationTargets) 
+      throws IOException {
       String basePath = job.get(MRConfig.LOCAL_DIR);
       LOG.info("[MR-4502]: I'm aggregator! Start to aggregatte local IFiles." +
       		"LOCAL_DIR is :" + basePath);
@@ -1538,9 +1539,8 @@ public class MapTask extends Task {
         sameVolRename(new Path(indexOutputPathName),
             new Path(tmpOutputPathName + MapOutputFile.MAP_OUTPUT_INDEX_SUFFIX_STRING));
       } catch (IOException e1) {
-        // TODO handle exception
-        e1.printStackTrace();
-        LOG.error(e1 + ", dstPathName is " + tmpOutputPathName);
+        LOG.error("Error while node-level combiner." + e1 + ", dstPathName is " + tmpOutputPathName);
+        throw new IOException("Error while node-level combiner creating files.");
       }
       
       File[] files = createInputFilesFromTaskAttempts(basePath, 
@@ -1557,13 +1557,13 @@ public class MapTask extends Task {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
+      finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
       
       try {
         Path finalIndexFile =
           mapOutputFile.getOutputIndexFileForWrite(finalIndexFileSize);
         Path finalOutputFile =
             mapOutputFile.getOutputFileForWrite(finalOutFileSize);
-        finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
         finalOut = rfs.create(finalOutputFile, true, 4096);
 
         sortPhase.addPhases(partitions); // Divide sort phase into sub-phases
@@ -1627,8 +1627,8 @@ public class MapTask extends Task {
         //sortPhase.complete();
 
       } catch(Exception e) {
-        // TODO Implement this method!
         LOG.error(e.toString());
+        throw new IOException("Error while node-level combining.");
         // TODO: for fast recovery
         //sameVolRename(new Path(dstPathName), outputPath);
       }
