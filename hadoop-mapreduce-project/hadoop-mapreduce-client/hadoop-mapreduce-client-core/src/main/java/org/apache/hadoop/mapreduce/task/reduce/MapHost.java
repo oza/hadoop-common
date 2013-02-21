@@ -63,7 +63,7 @@ public class MapHost {
     skipping.add(mapId);
   }
   
-  public List<TaskAttemptID> getAndClearSkippingMaps() {
+  public synchronized List<TaskAttemptID> getAndClearSkippingMaps() {
     List<TaskAttemptID> currentKnownMaps = skipping;
     maps = new ArrayList<TaskAttemptID>();
     return currentKnownMaps;
