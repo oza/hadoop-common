@@ -145,7 +145,6 @@ class ShuffleScheduler<K,V> {
       reduceShuffleBytes.increment(bytes);
       lastProgressTime = System.currentTimeMillis();
       LOG.debug("map " + mapId + " done " + status.getStateString());
-      LOG.info("map " + mapId + " done " + status.getStateString());
     }
   }
   
