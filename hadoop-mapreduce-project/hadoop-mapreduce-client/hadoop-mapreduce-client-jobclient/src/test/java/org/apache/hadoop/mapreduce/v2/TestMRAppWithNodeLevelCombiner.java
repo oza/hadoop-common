@@ -76,7 +76,7 @@ public class TestMRAppWithNodeLevelCombiner {
     // the values are counts (ints)
     conf.setOutputValueClass(IntWritable.class);
 
-    conf.set("mapred.mapper.class", "testjar.ClassWordCount$MapClass");        
+    conf.set("mapred.mapper.class", "testjar.ClassWordCount$MapClass");
     conf.set("mapred.combine.class", "testjar.ClassWordCount$Reduce");
     conf.set("mapred.reducer.class", "testjar.ClassWordCount$Reduce");
     FileInputFormat.setInputPaths(conf, inDir);
@@ -88,7 +88,7 @@ public class TestMRAppWithNodeLevelCombiner {
   }
 
   String launchWordCount(URI fileSys, JobConf conf, String input,
-      int numMaps, int numReduces) 
+      int numMaps, int numReduces)
           throws IOException {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
@@ -100,7 +100,7 @@ public class TestMRAppWithNodeLevelCombiner {
       Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
           new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
-        BufferedReader file = 
+        BufferedReader file =
             new BufferedReader(new InputStreamReader(fs.open(fileList[i])));
         String line = file.readLine();
         while (line != null) {
@@ -114,7 +114,7 @@ public class TestMRAppWithNodeLevelCombiner {
     return result.toString();
   }
   
-  @Test
+  @Test(timeout = 80000)
   public void testNodeLevelCombinerWithSingleReducer()
       throws IOException {
     final int numMaps = 5;
@@ -163,7 +163,7 @@ public class TestMRAppWithNodeLevelCombiner {
     }
   }
   
-  @Test
+  @Test(timeout = 80000)
   public void testNodeLevelCombinerWithMultipleReducers()
       throws IOException {
     final int numMaps = 5;
