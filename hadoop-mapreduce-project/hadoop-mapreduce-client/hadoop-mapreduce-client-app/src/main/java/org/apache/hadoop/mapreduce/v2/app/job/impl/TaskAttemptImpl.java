@@ -1519,15 +1519,15 @@ public abstract class TaskAttemptImpl implements
         (TaskAttemptContainerAssignedEvent) event;
 
       Container container = cEvent.getContainer();
-      taskAttempt.container = container;
-      taskAttempt.containerID = cEvent.getContainer().getId();
-      taskAttempt.containerNodeId = cEvent.getContainer().getNodeId();
-      taskAttempt.containerMgrAddress = StringInterner.weakIntern(
-          taskAttempt.containerNodeId.toString());
-      taskAttempt.nodeHttpAddress = StringInterner.weakIntern(
-          cEvent.getContainer().getNodeHttpAddress());
-      taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
-      taskAttempt.assignedCapability = cEvent.getContainer().getResource();
+      //taskAttempt.container = container;
+      //taskAttempt.containerID = cEvent.getContainer().getId();
+      //taskAttempt.containerNodeId = cEvent.getContainer().getNodeId();
+      //taskAttempt.containerMgrAddress = StringInterner.weakIntern(
+      //    taskAttempt.containerNodeId.toString());
+      //taskAttempt.nodeHttpAddress = StringInterner.weakIntern(
+      //    cEvent.getContainer().getNodeHttpAddress());
+      //taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
+      //taskAttempt.assignedCapability = cEvent.getContainer().getResource();
       
       if (taskAttempt.isAggregationEnabled && 
           taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
@@ -1796,7 +1796,7 @@ public abstract class TaskAttemptImpl implements
   }
   
   public ArrayList<TaskAttemptCompletionEvent> getAggregationTargets() {
-    String hostname = this.nodeHttpAddress;
+    String hostname = this.getNodeHttpAddress();
     return aggregationWaitMap.get(hostname);
   }
 
@@ -1810,8 +1810,7 @@ public abstract class TaskAttemptImpl implements
       return shouldBeAggregator;
     }
     
-    // FIXME: A bit dangerous.
-    hostname = this.nodeHttpAddress.split(":")[0];
+    hostname = this.getNodeHttpAddress().split(":")[0];
     
     shouldBeAggregator = aggregationWaitMap.isAggregatable(hostname,
         getID(), aggregationThreshold);
