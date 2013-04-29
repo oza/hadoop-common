@@ -1531,7 +1531,7 @@ public class MapTask extends Task {
     }
     
     private void runAggregation(Path outputPath, TaskAttemptID[] aggregationTargets) 
-      throws IOException {
+      throws IOException, ClassNotFoundException, InterruptedException {
       String basePath = job.get(MRConfig.LOCAL_DIR);
       LOG.info("[MR-4502]: I'm aggregator! Start to aggregatte local IFiles." +
       		"LOCAL_DIR is :" + basePath);
@@ -1566,8 +1566,8 @@ public class MapTask extends Task {
           finalOutFileSize += rfs.getFileStatus(filename[i]).getLen();
         }
       } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        LOG.error("Error while preparing node-level combining." + e.toString());
+        throw new IOException("Error while preparing node-level combining." + e.toString());
       }
       finalOutFileSize += partitions * APPROX_HEADER_LENGTH;
       
@@ -1636,15 +1636,13 @@ public class MapTask extends Task {
         }
         spillRec.writeToFile(finalIndexFile, job);
         finalOut.close();
-        //sortPhase.complete();
-
-      } catch(Exception e) {
-        LOG.error(e.toString());
-        throw new IOException("Error while node-level combining.");
-        // TODO: for fast recovery
-        //sameVolRename(new Path(dstPathName), outputPath);
+      } catch(IOException e) {
+        throw new IOException("Error while node-level combining.:" + e.toString());
+      } catch (ClassNotFoundException e) {
+        throw new ClassNotFoundException("Error the class for node-level combining is not found.");
+      } catch (InterruptedException e) {
+        throw new InterruptedException("Interrupted" + e.toString());
       }
-
     }
 
     private Path[] createIndexFilesFromFiles(File[] files) {
