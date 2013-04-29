@@ -1781,7 +1781,7 @@ public abstract class TaskAttemptImpl implements
   }
   
   public ArrayList<TaskAttemptCompletionEvent> getAggregationTargets() {
-    String hostname = this.nodeHttpAddress;
+    String hostname = this.getNodeHttpAddress();
     return aggregationWaitMap.get(hostname);
   }
 
@@ -1796,7 +1796,7 @@ public abstract class TaskAttemptImpl implements
     }
     
     // FIXME: A bit dangerous.
-    hostname = this.nodeHttpAddress.split(":")[0];
+    hostname = this.getNodeHttpAddress().split(":")[0];
     
     shouldBeAggregator = aggregationWaitMap.isAggregatable(hostname,
         getID(), aggregationThreshold);
