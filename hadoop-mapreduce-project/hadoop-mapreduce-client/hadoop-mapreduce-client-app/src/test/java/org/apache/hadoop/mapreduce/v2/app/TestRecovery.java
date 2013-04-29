@@ -85,6 +85,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.MapTaskImpl;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.AggregationWaitMap;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
@@ -1431,9 +1432,11 @@ public class TestRecovery {
     when(appContext.getClusterInfo()).thenReturn(clusterInfo);
 
     TaskSplitMetaInfo taskSplitMetaInfo = mock(TaskSplitMetaInfo.class);
+    AggregationWaitMap aggregationWaitMap = mock(AggregationWaitMap.class);
     MapTaskImpl mapTask = new MapTaskImpl(jobId, partitions,
         eh, remoteJobConfFile, conf,
-        taskSplitMetaInfo, taskAttemptListener, jobToken, credentials, clock,
+        taskSplitMetaInfo, aggregationWaitMap,
+        taskAttemptListener, jobToken, credentials, clock,
         appAttemptId, metrics, appContext);
     return mapTask;
   }
