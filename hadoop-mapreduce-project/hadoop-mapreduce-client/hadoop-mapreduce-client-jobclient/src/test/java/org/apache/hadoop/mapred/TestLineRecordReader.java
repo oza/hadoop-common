@@ -17,12 +17,18 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.Reader;
 import java.io.Writer;
 
+import junit.framework.Assert;
 import junit.framework.TestCase;
 
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,6 +36,11 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionInputStream;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.junit.Test;
 
 public class TestLineRecordReader extends TestCase {
@@ -52,6 +63,23 @@ public class TestLineRecordReader extends TestCase {
     writer.write("abc\ndef\t\nghi\njkl");
     writer.close();
   }
+  
+  /**
+   * Writes the compressed input test file
+   * 
+   * @param conf
+   * @throws IOException
+   */
+  public void createCompressedInputFile(Configuration conf) throws IOException {
+    FileSystem localFs = FileSystem.getLocal(conf);
+    Path file = new Path(inputDir, "test.txt.gz");
+    GzipCodec codec = new GzipCodec();
+    CompressionOutputStream out =
+        codec.createOutputStream(localFs.create(file));
+    Writer writer = new OutputStreamWriter(out);
+    writer.write("abc\ndef\t\nghi\njkl");
+    writer.close();
+  }
 
   /**
    * Reads the output file into a string
@@ -65,7 +93,27 @@ public class TestLineRecordReader extends TestCase {
     Path file = new Path(outputDir, "part-00000");
     return UtilsForTests.slurpHadoop(file, localFs);
   }
-
+  
+  /**
+   * Reads the output file into a string
+   * 
+   * @param conf
+   * @return
+   * @throws IOException
+   */
+  public String readCompressedOutputFile(Configuration conf) throws IOException {
+    FileSystem localFs = FileSystem.getLocal(conf);
+    Path file = new Path(outputDir, "part-00000");
+    GzipCodec codec = new GzipCodec();
+    
+    byte[] buf = new byte[4096];
+    codec.setConf(conf);
+    InputStream in = codec.createInputStream(localFs.open(file));
+    int len = in.read(buf);
+    in.close();
+    return new String(buf, 0, len);
+  }
+  
   /**
    * Creates and runs an MR job
    * 
@@ -129,6 +177,23 @@ public class TestLineRecordReader extends TestCase {
     createAndRunJob(conf);
     String expected = "0\tabc\n4\tdef\t\n9\tghi\n13\tjkl\n";
     this.assertEquals(expected, readOutputFile(conf));
+  }
+
+  @Test (timeout = 2000)
+  public void testCompressedInputFile() throws IOException,
+      InterruptedException, ClassNotFoundException {
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codecs",
+        "org.apache.hadoop.io.compress.GzipCodec");
+    
+    FileSystem localFs = FileSystem.getLocal(conf);
+    // cleanup
+    localFs.delete(workDir, true);
+    // creating compressed input test file
+    createCompressedInputFile(conf);
+    createAndRunJob(conf);
+    String expected = "0\tabc\n4\tdef\t\n9\tghi\n13\tjkl\n";
+    Assert.assertEquals(expected, readOutputFile(conf));
   }
 
 }
