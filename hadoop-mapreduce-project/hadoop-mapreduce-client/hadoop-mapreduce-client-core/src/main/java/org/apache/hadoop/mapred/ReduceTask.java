@@ -369,7 +369,7 @@ public class ReduceTask extends Task {
       ShuffleConsumerPlugin.Context shuffleContext = 
         new ShuffleConsumerPlugin.Context(getTaskID(), job, FileSystem.getLocal(job), umbilical, 
                     super.lDirAlloc, reporter, codec, 
-                    combinerClass, combineCollector, 
+                    combineCollector, 
                     spilledRecordsCounter, reduceCombineInputCounter,
                     shuffledMapsCounter,
                     reduceShuffleBytes, failedShuffleCounter,

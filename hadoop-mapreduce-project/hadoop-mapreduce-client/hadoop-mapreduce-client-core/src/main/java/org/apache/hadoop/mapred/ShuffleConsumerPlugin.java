@@ -52,7 +52,6 @@ public interface ShuffleConsumerPlugin<K, V> {
     private final LocalDirAllocator localDirAllocator;
     private final Reporter reporter;
     private final CompressionCodec codec;
-    private final Class<? extends Reducer> combinerClass;
     private final CombineOutputCollector<K, V> combineCollector;
     private final Counters.Counter spilledRecordsCounter;
     private final Counters.Counter reduceCombineInputCounter;
@@ -71,7 +70,6 @@ public interface ShuffleConsumerPlugin<K, V> {
                    TaskUmbilicalProtocol umbilical,
                    LocalDirAllocator localDirAllocator,
                    Reporter reporter, CompressionCodec codec,
-                   Class<? extends Reducer> combinerClass,
                    CombineOutputCollector<K,V> combineCollector,
                    Counters.Counter spilledRecordsCounter,
                    Counters.Counter reduceCombineInputCounter,
@@ -88,7 +86,6 @@ public interface ShuffleConsumerPlugin<K, V> {
       this.localDirAllocator = localDirAllocator;
       this.reporter = reporter;
       this.codec = codec;
-      this.combinerClass = combinerClass;
       this.combineCollector = combineCollector;
       this.spilledRecordsCounter = spilledRecordsCounter;
       this.reduceCombineInputCounter = reduceCombineInputCounter;
@@ -123,9 +120,6 @@ public interface ShuffleConsumerPlugin<K, V> {
     }
     public CompressionCodec getCodec() {
       return codec;
-    }
-    public Class<? extends Reducer> getCombinerClass() {
-      return combinerClass;
     }
     public CombineOutputCollector<K, V> getCombineCollector() {
       return combineCollector;
