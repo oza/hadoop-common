@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.IOException;
+
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -60,7 +62,6 @@ public class TestShufflePlugin<K, V> {
       context.getLocalDirAllocator();
       context.getReporter();
       context.getCodec();
-      context.getCombinerClass();
       context.getCombineCollector();
       context.getSpilledRecordsCounter();
       context.getReduceCombineInputCounter();
@@ -130,7 +131,6 @@ public class TestShufflePlugin<K, V> {
     TaskUmbilicalProtocol mockUmbilical = mock(TaskUmbilicalProtocol.class);
     Reporter mockReporter = mock(Reporter.class);
     FileSystem mockFileSystem = mock(FileSystem.class);
-    Class<? extends org.apache.hadoop.mapred.Reducer>  combinerClass = jobConf.getCombinerClass();
     @SuppressWarnings("unchecked")  // needed for mock with generic
     CombineOutputCollector<K, V>  mockCombineOutputCollector =
       (CombineOutputCollector<K, V>) mock(CombineOutputCollector.class);
@@ -151,7 +151,7 @@ public class TestShufflePlugin<K, V> {
 	    new ShuffleConsumerPlugin.Context<K, V>(mockTaskAttemptID, jobConf, mockFileSystem,
                                                 mockUmbilical, mockLocalDirAllocator,
                                                 mockReporter, mockCompressionCodec,
-                                                combinerClass, mockCombineOutputCollector,
+                                                mockCombineOutputCollector,
                                                 mockCounter, mockCounter, mockCounter,
                                                 mockCounter, mockCounter, mockCounter,
                                                 mockTaskStatus, mockProgress, mockProgress,
@@ -171,7 +171,7 @@ public class TestShufflePlugin<K, V> {
     mockReduceTask.getPartition();
     mockReporter.progress();
   }
-
+  
   @Test
   /**
    * A testing method verifying availability and accessibility of API needed for
