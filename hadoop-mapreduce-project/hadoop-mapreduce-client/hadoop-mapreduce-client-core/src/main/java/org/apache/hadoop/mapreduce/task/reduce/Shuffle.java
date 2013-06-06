@@ -80,7 +80,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
       ShuffleConsumerPlugin.Context context) {
     return new MergeManagerImpl<K, V>(reduceId, jobConf, context.getLocalFS(),
         context.getLocalDirAllocator(), reporter, context.getCodec(),
-        context.getCombinerClass(), context.getCombineCollector(), 
+        context.getCombineCollector(), 
         context.getSpilledRecordsCounter(),
         context.getReduceCombineInputCounter(),
         context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
