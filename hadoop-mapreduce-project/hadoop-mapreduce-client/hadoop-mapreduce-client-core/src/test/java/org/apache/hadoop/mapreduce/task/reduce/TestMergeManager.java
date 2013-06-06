@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MROutputFiles;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,8 +61,9 @@ public class TestMergeManager {
     TestExceptionReporter reporter = new TestExceptionReporter();
     CyclicBarrier mergeStart = new CyclicBarrier(2);
     CyclicBarrier mergeComplete = new CyclicBarrier(2);
+    TaskAttemptID taskAttemptId = new TaskAttemptID();
     StubbedMergeManager mgr = new StubbedMergeManager(conf, reporter,
-        mergeStart, mergeComplete);
+        taskAttemptId, mergeStart, mergeComplete);
 
     // reserve enough map output to cause a merge when it is committed
     MapOutput<Text, Text> out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
@@ -132,10 +134,12 @@ public class TestMergeManager {
 
   private static class StubbedMergeManager extends MergeManagerImpl<Text, Text> {
     private TestMergeThread mergeThread;
+    
 
-    public StubbedMergeManager(JobConf conf, ExceptionReporter reporter,
+    public StubbedMergeManager(
+        JobConf conf, ExceptionReporter reporter, TaskAttemptID taskAttemptId,
         CyclicBarrier mergeStart, CyclicBarrier mergeComplete) {
-      super(null, conf, mock(LocalFileSystem.class), null, null, null, null,
+      super(taskAttemptId, conf, mock(LocalFileSystem.class), null, null, null, null,
           null, null, null, null, reporter, null, mock(MapOutputFile.class));
       mergeThread.setSyncBarriers(mergeStart, mergeComplete);
     }
@@ -215,10 +219,12 @@ public class TestMergeManager {
     jobConf.setInt(MRJobConfig.IO_SORT_FACTOR, SORT_FACTOR);
 
     MapOutputFile mapOutputFile = new MROutputFiles();
+    
+    TaskAttemptID taskAttemptId = new TaskAttemptID();
     FileSystem fs = FileSystem.getLocal(jobConf);
     MergeManagerImpl<IntWritable, IntWritable> manager =
-      new MergeManagerImpl<IntWritable, IntWritable>(null, jobConf, fs, null
-        , null, null, null, null, null, null, null, null, null, mapOutputFile);
+      new MergeManagerImpl<IntWritable, IntWritable>(taskAttemptId, jobConf, fs
+        , null, null, null, null, null, null, null, null, null, null, mapOutputFile);
 
     MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
       onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,

@@ -82,7 +82,7 @@ public class TestMerger {
   }
   
   @Test
-  public void testInMemoryMerger() throws IOException {
+  public void testInMemoryMerger() throws IOException, InterruptedException, ClassNotFoundException {
     JobID jobId = new JobID("a", 0);
     TaskAttemptID reduceId = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 0), 0);
