@@ -43,6 +43,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapred.Merger;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
+import org.apache.hadoop.mapred.ReduceTask;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Task;
@@ -51,6 +52,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.mapred.Task.CombineValuesIterator;
+import org.apache.hadoop.mapred.Task.CombinerRunner;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
@@ -106,11 +108,6 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   private final ExceptionReporter exceptionReporter;
   
   /**
-   * Combiner class to run during in-memory merge, if defined.
-   */
-  private final Class<? extends Reducer> combinerClass;
-
-  /**
    * Resettable collector used for combine.
    */
   private final CombineOutputCollector<K,V> combineCollector;
@@ -124,13 +121,14 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   private final CompressionCodec codec;
   
   private final Progress mergePhase;
+  
+  private ReduceTask.CombinerRunner<K, V> combinerRunner;
 
   public MergeManagerImpl(TaskAttemptID reduceId, JobConf jobConf, 
                       FileSystem localFS,
                       LocalDirAllocator localDirAllocator,  
                       Reporter reporter,
                       CompressionCodec codec,
-                      Class<? extends Reducer> combinerClass,
                       CombineOutputCollector<K,V> combineCollector,
                       Counters.Counter spilledRecordsCounter,
                       Counters.Counter reduceCombineInputCounter,
@@ -144,9 +142,23 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     
     this.reporter = reporter;
     this.codec = codec;
-    this.combinerClass = combinerClass;
     this.combineCollector = combineCollector;
     this.reduceCombineInputCounter = reduceCombineInputCounter;
+    
+    try {
+      if (this.reporter instanceof Task.TaskReporter) {
+        combinerRunner = CombinerRunner.create(
+              jobConf, org.apache.hadoop.mapred.TaskAttemptID.downgrade(reduceId), 
+              this.reduceCombineInputCounter, (Task.TaskReporter)this.reporter, null);
+      } else {
+        combinerRunner = null;
+      }
+    } catch (ClassNotFoundException e) {
+      LOG.warn("Not found combiner class the job program specified." +
+      		"Just skip reduce-side combiner.");
+      combinerRunner = null;
+    }
+    
     this.spilledRecordsCounter = spilledRecordsCounter;
     this.mergedMapOutputsCounter = mergedMapOutputsCounter;
     this.mapOutputFile = mapOutputFile;
@@ -422,7 +434,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     }
     
     @Override
-    public void merge(List<InMemoryMapOutput<K,V>> inputs) throws IOException {
+    public void merge(List<InMemoryMapOutput<K,V>> inputs) throws IOException,
+      InterruptedException, ClassNotFoundException {
       if (inputs == null || inputs.size() == 0) {
         return;
       }
@@ -469,11 +482,11 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                              (RawComparator<K>)jobConf.getOutputKeyComparator(),
                              reporter, spilledRecordsCounter, null, null);
         
-        if (null == combinerClass) {
+        if (null == combinerRunner) {
           Merger.writeFile(rIter, writer, reporter, jobConf);
         } else {
           combineCollector.setWriter(writer);
-          combineAndSpill(rIter, reduceCombineInputCounter);
+          combinerRunner.combine(rIter, combineCollector);
         }
         writer.close();
         compressAwarePath = new CompressAwarePath(outputPath,
@@ -568,29 +581,6 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
           approxOutputSize + "." + 
           " Local output file is " + outputPath + " of size " +
           localFS.getFileStatus(outputPath).getLen());
-    }
-  }
-  
-  private void combineAndSpill(
-      RawKeyValueIterator kvIter,
-      Counters.Counter inCounter) throws IOException {
-    JobConf job = jobConf;
-    Reducer combiner = ReflectionUtils.newInstance(combinerClass, job);
-    Class<K> keyClass = (Class<K>) job.getMapOutputKeyClass();
-    Class<V> valClass = (Class<V>) job.getMapOutputValueClass();
-    RawComparator<K> comparator = 
-      (RawComparator<K>)job.getOutputKeyComparator();
-    try {
-      CombineValuesIterator values = new CombineValuesIterator(
-          kvIter, comparator, keyClass, valClass, job, Reporter.NULL,
-          inCounter);
-      while (values.more()) {
-        combiner.reduce(values.getKey(), values, combineCollector,
-                        Reporter.NULL);
-        values.nextKey();
-      }
-    } finally {
-      combiner.close();
     }
   }
 

@@ -108,5 +108,5 @@ abstract class MergeThread<T,K,V> extends Thread {
     }
   }
 
-  public abstract void merge(List<T> inputs) throws IOException;
+  public abstract void merge(List<T> inputs) throws IOException, InterruptedException, ClassNotFoundException;
 }

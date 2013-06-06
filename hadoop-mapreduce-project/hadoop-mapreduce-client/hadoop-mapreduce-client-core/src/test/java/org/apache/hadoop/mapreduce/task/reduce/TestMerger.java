@@ -82,7 +82,7 @@ public class TestMerger {
   }
   
   @Test
-  public void testInMemoryMerger() throws IOException {
+  public void testInMemoryMerger() throws IOException, InterruptedException, ClassNotFoundException {
     JobID jobId = new JobID("a", 0);
     TaskAttemptID reduceId = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 0), 0);
@@ -94,7 +94,7 @@ public class TestMerger {
     LocalDirAllocator lda = new LocalDirAllocator(MRConfig.LOCAL_DIR);
     
     MergeManagerImpl<Text, Text> mergeManager = new MergeManagerImpl<Text, Text>(
-        reduceId, jobConf, fs, lda, Reporter.NULL, null, null, null, null, null,
+        reduceId, jobConf, fs, lda, Reporter.NULL, null, null, null, null,
         null, null, new Progress(), new MROutputFiles());
     
     // write map outputs
