@@ -42,6 +42,7 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -96,7 +97,7 @@ public class TestMRAppWithCombiner {
   }
 
   @Test
-  public void testCombinerShouldUpdateTheReporter() throws Exception {
+  public void testCombinerShouldUpdateTheReporterWithOldApi() throws Exception {
     JobConf conf = new JobConf(mrCluster.getConfig());
     int numMaps = 5;
     int numReds = 2;
@@ -120,6 +121,37 @@ public class TestMRAppWithCombiner {
     FileOutputFormat.setOutputPath(conf, out);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReds);
+    
+    runJob(conf);
+  }
+
+  @Test
+  public void testCombinerShouldWorksWithNewApi() throws Exception {
+    JobConf conf = new JobConf(mrCluster.getConfig());
+    int numMaps = 5;
+    int numReds = 2;
+    Path in = new Path(mrCluster.getTestWorkDir().getAbsolutePath(),
+        "testCombinerShouldUpdateTheReporter-in");
+    Path out = new Path(mrCluster.getTestWorkDir().getAbsolutePath(),
+        "testCombinerShouldUpdateTheReporter-out");
+    Job.getInstance(conf);
+    createInputOutPutFolder(in, out, numMaps);
+    conf.setJobName("test-job-with-combiner");
+    conf.setMapperClass(IdentityMapper.class);
+    conf.setReducerClass(IdentityReducer.class);
+    DistributedCache.addFileToClassPath(TestMRJobs.APP_JAR, conf);
+    conf.setOutputCommitter(CustomOutputCommitter.class);
+    conf.setInputFormat(TextInputFormat.class);
+    conf.setOutputKeyClass(LongWritable.class);
+    conf.setOutputValueClass(Text.class);
+
+    FileInputFormat.setInputPaths(conf, in);
+    FileOutputFormat.setOutputPath(conf, out);
+    conf.setNumMapTasks(numMaps);
+    conf.setNumReduceTasks(numReds);
+    
+    Job job = Job.getInstance(conf);
+    job.setCombinerClass(org.apache.hadoop.mapreduce.Reducer.class);
     
     runJob(conf);
   }

@@ -146,13 +146,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     this.reduceCombineInputCounter = reduceCombineInputCounter;
     
     try {
-      if (this.reporter instanceof Task.TaskReporter) {
-        combinerRunner = CombinerRunner.create(
-              jobConf, org.apache.hadoop.mapred.TaskAttemptID.downgrade(reduceId), 
-              this.reduceCombineInputCounter, (Task.TaskReporter)this.reporter, null);
-      } else {
-        combinerRunner = null;
-      }
+      combinerRunner = CombinerRunner.create(
+          jobConf, org.apache.hadoop.mapred.TaskAttemptID.downgrade(reduceId), 
+          this.reduceCombineInputCounter, (Task.TaskReporter)this.reporter, null);
     } catch (ClassNotFoundException e) {
       LOG.warn("Not found combiner class the job program specified." +
       		"Just skip reduce-side combiner.");
