@@ -122,13 +122,9 @@ public class Client {
    * the sending of parameters to a separate thread isolates them
    * from thread interruptions in the calling code.
    */
-  private static final ExecutorService SEND_PARAMS_EXECUTOR = 
-    Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder()
-        .setDaemon(true)
-        .setNameFormat("IPC Parameter Sending Thread #%d")
-        .build());
-
+  private static ExecutorService SEND_PARAMS_EXECUTOR = null;
+  private static int executorRefCount = 0;
+  private static Object executorLock = new Object();
   
   /**
    * set the ping interval value in configuration
@@ -200,6 +196,37 @@ public class Client {
    */
   synchronized boolean isZeroReference() {
     return refCount==0;
+  }
+  
+  /**
+   * Increment this client's reference count for SEND_PARAMS_EXECUTOR
+   * This method is assumed to be called from the synchronization block
+   * of executorLock.
+   *
+   */
+  private void incExecutorCount() {
+    executorRefCount++;
+  }
+  
+  /**
+   * Decrement this client's reference count for SEND_PARAMS_EXECUTOR
+   * This method is assumed to be called from the synchronization block
+   * of executorLock.
+   *
+   */
+  private void decExecutorCount() {
+    executorRefCount--;
+  }
+  
+  /**
+   * Return if this client has no reference
+   * This method is assumed to be called from the synchronization block
+   * of executorLock.
+   * 
+   * @return true if this client has no reference; false otherwise
+   */
+  private boolean isZeroReferenceForExecutor() {
+    return executorRefCount==0;
   }
 
   /** 
@@ -880,6 +907,7 @@ public class Client {
 
       // Serialize the call to be sent. This is done from the actual
       // caller thread, rather than the SEND_PARAMS_EXECUTOR thread,
+      
       // so that if the serialization throws an error, it is reported
       // properly. This also parallelizes the serialization.
       //
@@ -1092,6 +1120,17 @@ public class Client {
     this.fallbackAllowed = conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     this.uuid = StringUtils.getUuidBytes();
+
+    synchronized(executorLock) {
+      if (isZeroReferenceForExecutor()) {
+        SEND_PARAMS_EXECUTOR = Executors.newCachedThreadPool(
+            new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("IPC Parameter Sending Thread #%d")
+            .build());
+      }
+      incExecutorCount();
+    }
   }
 
   /**
@@ -1134,6 +1173,24 @@ public class Client {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
+      }
+    }
+    
+    synchronized(executorLock) {
+      decExecutorCount();
+
+      if (isZeroReferenceForExecutor()){
+        SEND_PARAMS_EXECUTOR.shutdown();
+        try {
+          if (!SEND_PARAMS_EXECUTOR.awaitTermination(1, TimeUnit.MINUTES)) {
+            SEND_PARAMS_EXECUTOR.shutdownNow();
+          }
+        } catch (InterruptedException e) {
+          LOG.error("Interrupted while waiting for SEND_PARAMS_EXECUTOR " +
+              "to stop", e); 
+          SEND_PARAMS_EXECUTOR.shutdownNow();
+        }
+        SEND_PARAMS_EXECUTOR = null;
       }
     }
   }
