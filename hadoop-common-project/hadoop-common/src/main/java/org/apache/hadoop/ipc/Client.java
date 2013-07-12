@@ -128,7 +128,7 @@ public class Client {
       new ClientExecutorServiceFactory();
 
   private static class ClientExecutorServiceFactory {
-    private static int executorRefCount = 0;
+    private int executorRefCount = 0;
     private ExecutorService clientExecutor = null;
     
     /**
@@ -163,6 +163,8 @@ public class Client {
      */
     synchronized ExecutorService unrefAndCleanup() {
       executorRefCount--;
+      assert(executorRefCount >= 0);
+      
       if (executorRefCount == 0) {
         clientExecutor.shutdown();
         try {
