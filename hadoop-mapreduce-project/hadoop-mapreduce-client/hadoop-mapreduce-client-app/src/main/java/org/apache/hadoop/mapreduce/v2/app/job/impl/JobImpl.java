@@ -603,9 +603,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
  
   private JobStateInternal forcedState = null;
 
-  //Executor used for running future tasks. Setting thread pool size to 1
-  private ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
-  private ScheduledFuture failWaitTriggerScheduledFuture;
   private final boolean isAggregationEnabled;
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
@@ -632,7 +629,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.oldJobId = TypeConverter.fromYarn(jobId);
     this.committer = committer;
     this.newApiCommitter = newApiCommitter;
-    // TODO: Fix to pass by JobConf MR-4502
     this.isAggregationEnabled = false;
 
     this.taskAttemptListener = taskAttemptListener;

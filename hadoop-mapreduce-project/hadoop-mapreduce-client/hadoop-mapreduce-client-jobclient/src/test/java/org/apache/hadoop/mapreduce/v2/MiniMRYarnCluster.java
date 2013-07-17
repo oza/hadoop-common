@@ -50,11 +50,15 @@ import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
  */
 public class MiniMRYarnCluster extends MiniYARNCluster {
 
-  public static final String APPJAR = JarFinder.getJar(LocalContainerLauncher.class);
+  public static String APPJAR = JarFinder.getJar(LocalContainerLauncher.class);
 
-  private static final Log LOG = LogFactory.getLog(MiniMRYarnCluster.class);
+  protected static final Log LOG = LogFactory.getLog(MiniMRYarnCluster.class);
   private JobHistoryServer historyServer;
   private JobHistoryServerWrapper historyServerWrapper;
+
+  public static void setAppJar(Class<?> cls) {
+    APPJAR = JarFinder.getJar(cls);
+  }
 
   public MiniMRYarnCluster(String testName) {
     this(testName, 1);

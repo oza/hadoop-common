@@ -155,8 +155,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
           event.getTaskAttemptId() + "'");
       break;
     case AGGREGATED:
-      u = getBaseURI(event.getTaskTrackerHttp());
-      scheduler.skip(u.getHost() + ":" + u.getPort(),
+      u = getBaseURI(reduceId, event.getTaskTrackerHttp());
+      skip(u.getHost() + ":" + u.getPort(),
           u.toString(),
           event.getTaskAttemptId().getTaskID(), event.getTaskAttemptId());
       LOG.info("Ignoring output of aggregated its outputs: '" +
@@ -330,6 +330,35 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       updateStatus();
     }
   }
+  
+  public synchronized void skip(String hostName,
+      String hostUrl,
+      TaskID taskId,
+      TaskAttemptID idToSkip) {
+    if (!finishedMaps[taskId.getId()]) {
+      finishedMaps[taskId.getId()] = true;
+      
+      MapHost host = mapLocations.get(hostName);
+      if (host == null) {
+        host = new MapHost(hostName, hostUrl);
+        mapLocations.put(hostName, host);
+      }   
+      host.addSkippingMap(idToSkip);
+      notifyAll();
+      
+      if (--remainingMaps == 0) {
+        notifyAll();
+      }   
+      LOG.info("[MR-4502][Reducer] remainingMaps is " + remainingMaps);
+      LOG.info("map " + taskId + " done " + status.getStateString());
+      for (int i = 0; i < totalMaps; i++){
+        if (finishedMaps[i] == false) {
+          LOG.info("map " + i + "is not yed fetched.");
+        }   
+      }   
+      updateStatus();
+    }   
+  }   
 
   public synchronized void addKnownMapOutput(String hostName,
                                              String hostUrl,

@@ -40,6 +40,7 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -49,10 +50,10 @@ import org.junit.Test;
  */
 public class TestMRAppWithNodeLevelCombiner {
   MiniDFSCluster dfs = null;
-  MiniDistributedMRYarnCluster mrCluster = null;
+  MiniMRYarnCluster mrCluster = null;
   FileSystem localFs = null;
   FileSystem remoteFs = null;
-
+  
   
   void configureWordCount(FileSystem fs, JobConf conf, String input,
       int numMaps, int numReduces, Path inDir, Path outDir) throws IOException {
@@ -117,6 +118,7 @@ public class TestMRAppWithNodeLevelCombiner {
   @Test(timeout = 80000)
   public void testNodeLevelCombinerWithSingleReducer()
       throws IOException {
+    MiniMRYarnCluster.setAppJar(ContainerLauncherImpl.class);
     final int numMaps = 5;
     final int numReds = 1;
 
@@ -126,7 +128,7 @@ public class TestMRAppWithNodeLevelCombiner {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2)
           .format(true).racks(null).build();
       remoteFs = dfs.getFileSystem();
-      mrCluster = new MiniDistributedMRYarnCluster(TestMRAppWithNodeLevelCombiner.class.getName(), 3);
+      mrCluster = new MiniMRYarnCluster(TestMRAppWithNodeLevelCombiner.class.getName(), 3);
       conf.set("fs.defaultFS", remoteFs.getUri().toString());   // use HDFS
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/apps_staging_dir");
       conf.setBoolean(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED, true);
@@ -166,6 +168,7 @@ public class TestMRAppWithNodeLevelCombiner {
   @Test(timeout = 80000)
   public void testNodeLevelCombinerWithMultipleReducers()
       throws IOException {
+    MiniMRYarnCluster.setAppJar(ContainerLauncherImpl.class);
     final int numMaps = 5;
     final int numReds = 3;
     
@@ -175,7 +178,7 @@ public class TestMRAppWithNodeLevelCombiner {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2)
           .format(true).racks(null).build();
       remoteFs = dfs.getFileSystem();
-      mrCluster = new MiniDistributedMRYarnCluster(TestMRAppWithNodeLevelCombiner.class.getName(), 3);
+      mrCluster = new MiniMRYarnCluster(TestMRAppWithNodeLevelCombiner.class.getName(), 3);
       conf.set("fs.defaultFS", remoteFs.getUri().toString());   // use HDFS
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/apps_staging_dir");
       conf.setBoolean(MRJobConfig.MAP_NODE_LEVEL_AGGREGATION_ENABLED, true);
