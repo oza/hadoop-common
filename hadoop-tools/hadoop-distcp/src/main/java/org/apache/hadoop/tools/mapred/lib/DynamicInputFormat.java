@@ -57,7 +57,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
           = "mapred.num.splits";
   private static final String CONF_LABEL_NUM_ENTRIES_PER_CHUNK
           = "mapred.num.entries.per.chunk";
-
+  
   /**
    * Implementation of InputFormat::getSplits(). This method splits up the
    * copy-listing file into chunks, and assigns the first batch to different
@@ -91,7 +91,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
           // Setting non-zero length for FileSplit size, to avoid a possible
           // future when 0-sized file-splits are considered "empty" and skipped
           // over.
-          MIN_RECORDS_PER_CHUNK,
+          DistCpConstants.MIN_RECORDS_PER_CHUNK_DEFAULT,
           null));
     }
     DistCpUtils.publish(jobContext.getConfiguration(),
@@ -107,9 +107,13 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
     final Configuration configuration = context.getConfiguration();
     int numRecords = getNumberOfRecords(configuration);
     int numMaps = getNumMapTasks(configuration);
+    int maxChunksTolerable = getMaxChunksTolerable(configuration);
+    int maxChunksIdeal = getMaxChunksIdeal(configuration);
+    int minRecordsPerChunk = getMinRecordsPerChunk(configuration);
+
     // Number of chunks each map will process, on average.
     int splitRatio = getListingSplitRatio(configuration, numMaps, numRecords);
-    validateNumChunksUsing(splitRatio, numMaps);
+    validateNumChunksUsing(splitRatio, numMaps, maxChunksTolerable);
 
     int numEntriesPerChunk = (int)Math.ceil((float)numRecords
                                           /(splitRatio * numMaps));
@@ -168,9 +172,9 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
     return chunksFinal;
   }
 
-  private static void validateNumChunksUsing(int splitRatio, int numMaps)
-                                              throws IOException {
-    if (splitRatio * numMaps > MAX_CHUNKS_TOLERABLE)
+  private static void validateNumChunksUsing(int splitRatio, int numMaps,
+      int maxChunksTolerable) throws IOException {
+    if (splitRatio * numMaps > maxChunksTolerable)
       throw new IOException("Too many chunks created with splitRatio:"
                  + splitRatio + ", numMaps:" + numMaps
                  + ". Reduce numMaps or decrease split-ratio to proceed.");
@@ -240,12 +244,22 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
             CONF_LABEL_LISTING_SPLIT_RATIO,
             getSplitRatio(numMaps, numPaths));
   }
-
-  private static final int MAX_CHUNKS_TOLERABLE = 400;
-  private static final int MAX_CHUNKS_IDEAL     = 100;
-  private static final int MIN_RECORDS_PER_CHUNK = 5;
-  private static final int SPLIT_RATIO_DEFAULT  = 2;
-
+  
+  private static int getMaxChunksTolerable(Configuration configuration) {
+    return configuration.getInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE,
+        DistCpConstants.MAX_CHUNKS_TOLERABLE_DEFAULT);
+  }
+  
+  private static int getMaxChunksIdeal(Configuration configuration) {
+    return configuration.getInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL,
+        DistCpConstants.MAX_CHUNKS_IDEAL_DEFAULT);
+  }
+  
+  private static int getMinRecordsPerChunk(Configuration configuration) {
+    return configuration.getInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK,
+        DistCpConstants.MIN_RECORDS_PER_CHUNK_DEFAULT);
+  }
+  
   /**
    * Package private, for testability.
    * @param nMaps The number of maps requested for.
@@ -258,14 +272,14 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
       return 1;
     }
 
-    if (nMaps > MAX_CHUNKS_IDEAL)
-      return SPLIT_RATIO_DEFAULT;
+    if (nMaps > DistCpConstants.MAX_CHUNKS_IDEAL_DEFAULT)
+      return DistCpConstants.SPLIT_RATIO_DEFAULT;
 
-    int nPickups = (int)Math.ceil((float)MAX_CHUNKS_IDEAL/nMaps);
+    int nPickups = (int)Math.ceil((float)DistCpConstants.MAX_CHUNKS_IDEAL_DEFAULT/nMaps);
     int nRecordsPerChunk = (int)Math.ceil((float)nRecords/(nMaps*nPickups));
 
-    return nRecordsPerChunk < MIN_RECORDS_PER_CHUNK ?
-              SPLIT_RATIO_DEFAULT : nPickups;
+    return nRecordsPerChunk < DistCpConstants.MIN_RECORDS_PER_CHUNK_DEFAULT ?
+              DistCpConstants.SPLIT_RATIO_DEFAULT : nPickups;
   }
 
   static int getNumEntriesPerChunk(Configuration configuration) {

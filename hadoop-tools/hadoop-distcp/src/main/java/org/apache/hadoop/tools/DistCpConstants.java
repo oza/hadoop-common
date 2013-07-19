@@ -51,7 +51,12 @@ public class DistCpConstants {
   public static final String CONF_LABEL_SKIP_CRC = "distcp.skip.crc";
   public static final String CONF_LABEL_OVERWRITE = "distcp.copy.overwrite";
   public static final String CONF_LABEL_BANDWIDTH_MB = "distcp.map.bandwidth.mb";
-
+  
+  public static final String CONF_LABEL_MAX_CHUNKS_TOLERABLE = "distcp.max.chunks.tolerable";
+  public static final String CONF_LABEL_MAX_CHUNKS_IDEAL = "distcp.max.chunks.ideal";
+  public static final String CONF_LABEL_MIN_RECORDS_PER_CHUNK = "distcp.min.records_per_chunk";
+  public static final String CONF_LABEL_SPLIT_RATIO = "distcp.split.ratio";
+  
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
 
@@ -104,4 +109,13 @@ public class DistCpConstants {
   public static final int INVALID_ARGUMENT = -1;
   public static final int DUPLICATE_INPUT = -2;
   public static final int UNKNOWN_ERROR = -999;
+  
+  /**
+   * Constants for DistCp default values of configurable values
+   */
+  public static final int MAX_CHUNKS_TOLERABLE_DEFAULT = 400;
+  public static final int MAX_CHUNKS_IDEAL_DEFAULT     = 100;
+  public static final int MIN_RECORDS_PER_CHUNK_DEFAULT = 5;
+  public static final int SPLIT_RATIO_DEFAULT  = 2;
+
 }
