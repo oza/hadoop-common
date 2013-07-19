@@ -66,6 +66,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
+import org.apache.hadoop.ipc.RPC.CallType;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
@@ -277,7 +278,12 @@ public class Client {
   }
 
   Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
-    return new Call(rpcKind, rpcRequest);
+    return createCall(rpcKind, CallType.ONETIME, rpcRequest);
+  }
+  
+  Call createCall(RPC.RpcKind rpcKind, RPC.CallType callType,
+      Writable rpcRequest) {
+    return new Call(rpcKind, callType, rpcRequest);
   }
 
   /** 
@@ -290,10 +296,12 @@ public class Client {
     Writable rpcResponse;       // null if rpc has error
     IOException error;          // exception, null if success
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
+    final RPC.CallType callType;    // Call type - onetime or heartbeat style?
     boolean done;               // true when call is done
 
-    private Call(RPC.RpcKind rpcKind, Writable param) {
+    private Call(RPC.RpcKind rpcKind, RPC.CallType callType, Writable param) {
       this.rpcKind = rpcKind;
+      this.callType = callType;
       this.rpcRequest = param;
 
       final Integer id = callId.get();
@@ -310,6 +318,10 @@ public class Client {
       } else {
         this.retry = rc;
       }
+    }
+    
+    private Call(RPC.RpcKind rpcKind, Writable param) {
+      this(rpcKind, CallType.ONETIME, param);
     }
 
     /** Indicate when the call is complete and the
@@ -1366,7 +1378,7 @@ public class Client {
       ConnectionId remoteId) throws InterruptedException, IOException {
     return call(rpcKind, rpcRequest, remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT);
   }
-
+  
   /** 
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc respond.
@@ -1381,8 +1393,28 @@ public class Client {
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, int serviceClass)
+      throws InterruptedException, IOException  {
+    return call(rpcKind, RPC.CallType.ONETIME,
+        rpcRequest, remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT);
+  }
+
+  /** 
+   * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
+   * <code>remoteId</code>, returning the rpc respond.
+   * 
+   * @param rpcKind
+   * @param callType - 
+   * @param rpcRequest -  contains serialized method and method parameters
+   * @param remoteId - the target rpc server
+   * @param serviceClass - service class for RPC
+   * @returns the rpc response
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception.
+   */
+  public Writable call(RPC.RpcKind rpcKind, RPC.CallType callType,
+      Writable rpcRequest, ConnectionId remoteId, int serviceClass)
       throws InterruptedException, IOException {
-    final Call call = createCall(rpcKind, rpcRequest);
+    final Call call = createCall(rpcKind, callType, rpcRequest);
     Connection connection = getConnection(remoteId, call, serviceClass);
     try {
       connection.sendRpcRequest(call);                 // send the rpc request

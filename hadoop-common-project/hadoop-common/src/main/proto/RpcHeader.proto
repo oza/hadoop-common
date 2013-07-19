@@ -51,8 +51,11 @@ enum RpcKindProto {
   RPC_PROTOCOL_BUFFER  = 2;  // Use ProtobufRpcEngine
 }
 
-
-   
+enum CallTypeProto {
+  CALL_ONETIME          = 0;  // Used for built in calls by tests
+  CALL_HEARTBEAT       = 1;  // Use WritableRpcEngine 
+}
+ 
 message RpcRequestHeaderProto { // the header for the RpcRequest
   enum OperationProto {
     RPC_FINAL_PACKET        = 0; // The final RPC Packet
@@ -67,6 +70,7 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
   // clientId + callId uniquely identifies a request
   // retry count, 1 means this is the first retry
   optional sint32 retryCount = 5 [default = -1];
+  optional CallTypeProto callType = 6;
 }
 
 

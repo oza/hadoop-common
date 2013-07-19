@@ -92,6 +92,11 @@ public class RPC {
     } 
   }
   
+  public enum CallType {
+    ONETIME,
+    HEARTBEAT
+  }
+  
   interface RpcInvoker {   
     /**
      * Process a client call on the server side

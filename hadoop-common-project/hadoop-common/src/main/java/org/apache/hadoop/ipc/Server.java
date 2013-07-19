@@ -472,6 +472,7 @@ public abstract class Server {
                                           // time served when response is not null
     private ByteBuffer rpcResponse;       // the response for this call
     private final RPC.RpcKind rpcKind;
+    private final RPC.CallType callType;
     private final byte[] clientId;
 
     private Call(int id, int retryCount, Writable param, 
@@ -479,9 +480,14 @@ public abstract class Server {
       this(id, retryCount, param, connection, RPC.RpcKind.RPC_BUILTIN,
           RpcConstants.DUMMY_CLIENT_ID);
     }
-
     private Call(int id, int retryCount, Writable param, Connection connection,
         RPC.RpcKind kind, byte[] clientId) {
+      this(id, retryCount, param, connection, kind,
+          RPC.CallType.ONETIME, RpcConstants.DUMMY_CLIENT_ID);
+    }
+    
+    private Call(int id, int retryCount, Writable param, Connection connection,
+        RPC.RpcKind kind, RPC.CallType callType, byte[] clientId) {
       this.callId = id;
       this.retryCount = retryCount;
       this.rpcRequest = param;
@@ -489,6 +495,7 @@ public abstract class Server {
       this.timestamp = Time.now();
       this.rpcResponse = null;
       this.rpcKind = kind;
+      this.callType = callType;
       this.clientId = clientId;
     }
     
