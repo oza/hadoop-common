@@ -93,8 +93,8 @@ public class RPC {
   }
   
   public enum CallType {
-    ONETIME,
-    HEARTBEAT
+    CALL_ONETIME,
+    CALL_HEARTBEAT
   }
   
   interface RpcInvoker {   

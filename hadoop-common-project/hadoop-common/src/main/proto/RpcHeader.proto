@@ -117,6 +117,7 @@ message RpcResponseHeaderProto {
    ERROR_RPC_SERVER  = 4;      // Rpc error on server side
    ERROR_SERIALIZING_RESPONSE = 5; // error serializign response
    ERROR_RPC_VERSION_MISMATCH = 6; // Rpc protocol version mismatch
+   ERROR_BUSY_RETRY_LATER = 6; // Rpc error - server is temporary busy
 
 
    // Fatal Server side Rpc error - connection closed

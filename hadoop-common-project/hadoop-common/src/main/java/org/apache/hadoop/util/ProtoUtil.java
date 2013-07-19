@@ -158,6 +158,22 @@ public abstract class ProtoUtil {
     }
     return null;
   }
+  
+  static CallTypeProto convert(RPC.CallType type) {
+    switch (type) {
+    case CALL_ONETIME: return CallTypeProto.CALL_ONETIME;
+    case CALL_HEARTBEAT: return CallTypeProto.CALL_HEARTBEAT;
+    }
+    return null;
+  }
+  
+  public static RPC.CallType convert(CallTypeProto type) {
+    switch (type) {
+    case CALL_ONETIME: return RPC.CallType.CALL_ONETIME;
+    case CALL_HEARTBEAT: return RPC.CallType.CALL_HEARTBEAT;
+    }
+    return null;
+  }
  
   public static RpcRequestHeaderProto makeRpcRequestHeader(RPC.RpcKind rpcKind,
       RpcRequestHeaderProto.OperationProto operation, int callId,

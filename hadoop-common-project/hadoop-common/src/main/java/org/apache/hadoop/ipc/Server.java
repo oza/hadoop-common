@@ -55,7 +55,11 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -75,6 +79,7 @@ import org.apache.hadoop.io.WritableUtils;
 import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseWrapper;
+import org.apache.hadoop.ipc.RPC.CallType;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
@@ -483,7 +488,7 @@ public abstract class Server {
     private Call(int id, int retryCount, Writable param, Connection connection,
         RPC.RpcKind kind, byte[] clientId) {
       this(id, retryCount, param, connection, kind,
-          RPC.CallType.ONETIME, RpcConstants.DUMMY_CLIENT_ID);
+          RPC.CallType.CALL_ONETIME, RpcConstants.DUMMY_CLIENT_ID);
     }
     
     private Call(int id, int retryCount, Writable param, Connection connection,
@@ -1875,8 +1880,9 @@ public abstract class Server {
       }
         
       Call call = new Call(header.getCallId(), header.getRetryCount(),
-          rpcRequest, this, ProtoUtil.convert(header.getRpcKind()), header
-              .getClientId().toByteArray());
+          rpcRequest, this, ProtoUtil.convert(header.getRpcKind()), 
+          ProtoUtil.convert(header.getCallType()),
+          header.getClientId().toByteArray());
       callQueue.put(call);              // queue the call; maybe blocked here
       incRpcCount();  // Increment the rpc count
     }
@@ -2013,20 +2019,36 @@ public abstract class Server {
 
   /** Handles queued calls . */
   private class Handler extends Thread {
+    private final int rpcHighWaterMark = 10000;
+    private final long reduceTaskPeriod = 1;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    AtomicInteger callCounter = new AtomicInteger(0);
+    
     public Handler(int instanceNumber) {
       this.setDaemon(true);
       this.setName("IPC Server handler "+ instanceNumber + " on " + port);
     }
-
+    
+    private class CallCounterResetTask implements Runnable {
+      public void run() {
+        callCounter.set(0);
+      }
+    }
+    
     @Override
     public void run() {
       LOG.debug(getName() + ": starting");
       SERVER.set(Server.this);
       ByteArrayOutputStream buf = 
         new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
+      Runnable resetCounterTask = new CallCounterResetTask();
+      scheduler.scheduleAtFixedRate(resetCounterTask, 0,
+          reduceTaskPeriod, TimeUnit.SECONDS);
+      
       while (running) {
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
+          final int callCount = callCounter.incrementAndGet();
           if (LOG.isDebugEnabled()) {
             LOG.debug(getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
@@ -2035,6 +2057,17 @@ public abstract class Server {
           RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
           RpcErrorCodeProto detailedErr = null;
           Writable value = null;
+          
+          if (call.callType == CallType.CALL_ONETIME && 
+            callCount > rpcHighWaterMark) {
+            throw new RpcToBusyRetryLaterException("Server is temporary busy," +
+            		"so client needs to retry later.");
+          } else if (call.callType == CallType.CALL_HEARTBEAT &&
+             callCount > rpcHighWaterMark) {
+            // TODO: Make Heartbeat interval longer
+          } else {
+            new RuntimeException("Unkown call type of RPC.");
+          }
 
           CurCall.set(call);
           try {

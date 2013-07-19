@@ -278,7 +278,7 @@ public class Client {
   }
 
   Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
-    return createCall(rpcKind, CallType.ONETIME, rpcRequest);
+    return createCall(rpcKind, CallType.CALL_ONETIME, rpcRequest);
   }
   
   Call createCall(RPC.RpcKind rpcKind, RPC.CallType callType,
@@ -321,7 +321,7 @@ public class Client {
     }
     
     private Call(RPC.RpcKind rpcKind, Writable param) {
-      this(rpcKind, CallType.ONETIME, param);
+      this(rpcKind, CallType.CALL_ONETIME, param);
     }
 
     /** Indicate when the call is complete and the
@@ -1394,7 +1394,7 @@ public class Client {
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, int serviceClass)
       throws InterruptedException, IOException  {
-    return call(rpcKind, RPC.CallType.ONETIME,
+    return call(rpcKind, RPC.CallType.CALL_ONETIME,
         rpcRequest, remoteId, RPC.RPC_SERVICE_CLASS_DEFAULT);
   }
 
