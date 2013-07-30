@@ -35,11 +35,9 @@ import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.util.ThreadUtil;
 
-import com.google.common.base.Preconditions;
-
-class RetryInvocationHandler implements RpcInvocationHandler {
+class RetryInvocationHandler<T> implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
-  private final FailoverProxyProvider proxyProvider;
+  private final FailoverProxyProvider<T> proxyProvider;
 
   /**
    * The number of times the associated proxyProvider has ever been failed over.
@@ -49,14 +47,14 @@ class RetryInvocationHandler implements RpcInvocationHandler {
   
   private final RetryPolicy defaultPolicy;
   private final Map<String,RetryPolicy> methodNameToPolicyMap;
-  private Object currentProxy;
+  private T currentProxy;
 
-  RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+  RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
       RetryPolicy retryPolicy) {
     this(proxyProvider, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
 
-  RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+  RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
       RetryPolicy defaultPolicy,
       Map<String, RetryPolicy> methodNameToPolicyMap) {
     this.proxyProvider = proxyProvider;
