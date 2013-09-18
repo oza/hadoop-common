@@ -178,6 +178,7 @@ public class RetryCache {
 
   private final LightWeightGSet<CacheEntry, CacheEntry> set;
   private final long expirationTime;
+  private String cacheName;
 
   /**
    * Constructor
@@ -191,6 +192,7 @@ public class RetryCache {
     this.set = new LightWeightCache<CacheEntry, CacheEntry>(capacity, capacity,
         expirationTime, 0);
     this.expirationTime = expirationTime;
+    this.cacheName = cacheName;
   }
 
   private static boolean skipRetryCache() {
@@ -199,10 +201,17 @@ public class RetryCache {
     return !Server.isRpcInvocation() || Server.getCallId() < 0
         || Arrays.equals(Server.getClientId(), RpcConstants.DUMMY_CLIENT_ID);
   }
-  
+
   @VisibleForTesting
   public LightWeightGSet<CacheEntry, CacheEntry> getCacheSet() {
     return set;
+  }
+
+  /**
+   * This method returns cache name for metrics.
+   */
+  public String getCacheName() {
+    return cacheName;
   }
 
   /**

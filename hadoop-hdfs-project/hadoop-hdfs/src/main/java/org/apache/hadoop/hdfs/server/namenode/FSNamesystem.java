@@ -211,6 +211,7 @@ import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.ipc.metrics.RetryCacheMetrics;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -458,6 +459,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private INodeId inodeId;
   
   private final RetryCache retryCache;
+
+  private RetryCacheMetrics retryCacheMetrics;
   
   /**
    * Set the last allocated inode id when fsimage or editlog is loaded. 
@@ -704,6 +707,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
+      this.retryCacheMetrics = ignoreRetryCache ?
+        null: RetryCacheMetrics.create(retryCache);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -728,12 +733,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void addCacheEntryWithPayload(byte[] clientId, int callId, Object payload) {
     if (retryCache != null) {
       retryCache.addCacheEntryWithPayload(clientId, callId, payload);
+      incrCacheUpdatedCounter();
     }
   }
   
   void addCacheEntry(byte[] clientId, int callId) {
     if (retryCache != null) {
       retryCache.addCacheEntry(clientId, callId);
+      incrCacheUpdatedCounter();
+    }
+  }
+
+  private void incrCacheHitCounter() {
+    if (retryCacheMetrics != null) {
+      retryCacheMetrics.incrCacheHit();
+    }
+  }
+
+  private void incrCacheUpdatedCounter() {
+    if (retryCacheMetrics != null) {
+      retryCacheMetrics.incrCacheUpdated();
+    }
+  }
+
+  private void incrCacheClearedCounter() {
+    if (retryCacheMetrics != null) {
+      retryCacheMetrics.incrCacheCleared();
     }
   }
   
@@ -895,6 +920,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
     RetryCache.clear(retryCache);
+    incrCacheClearedCounter();
   }
   
   /**
@@ -1566,6 +1592,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      retryCacheMetrics.incrCacheHit();
+      incrCacheHitCounter();
       return; // Return previous response
     }
     
@@ -1795,6 +1823,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     if (!DFSUtil.isValidName(link)) {
@@ -1972,6 +2001,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
         null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return (HdfsFileStatus) cacheEntry.getPayload();
     }
     
@@ -2356,6 +2386,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
         null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return (LocatedBlock) cacheEntry.getPayload();
     }
       
@@ -2939,6 +2970,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return true; // Return previous response
     }
     boolean ret = false;
@@ -3025,6 +3057,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -3091,6 +3124,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException, IOException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return true; // Return previous response
     }
     boolean ret = false;
@@ -4251,6 +4285,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void saveNamespace() throws AccessControlException, IOException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     checkSuperuserPrivilege();
@@ -5107,6 +5142,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
         null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return (NamenodeCommand) cacheEntry.getPayload();
     }
     writeLock();
@@ -5142,6 +5178,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                             CheckpointSignature sig) throws IOException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     checkOperation(OperationCategory.CHECKPOINT);
@@ -5678,6 +5715,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     checkOperation(OperationCategory.WRITE);
@@ -6617,6 +6655,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
         null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return (String) cacheEntry.getPayload();
     }
     final FSPermissionChecker pc = getPermissionChecker();
@@ -6668,6 +6707,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String snapshotNewName) throws SafeModeException, IOException {
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     final FSPermissionChecker pc = getPermissionChecker();
@@ -6785,6 +6825,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final FSPermissionChecker pc = getPermissionChecker();
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
+      incrCacheHitCounter();
       return; // Return previous response
     }
     boolean success = false;
