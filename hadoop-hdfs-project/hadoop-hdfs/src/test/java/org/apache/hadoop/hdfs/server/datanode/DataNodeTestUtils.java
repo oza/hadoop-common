@@ -113,7 +113,12 @@ public class DataNodeTestUtils {
     return DataNode.createInterDataNodeProtocolProxy(datanodeid, conf,
         dn.getDnConf().socketTimeout, dn.getDnConf().connectToDnViaHostname);
   }
-  
+
+  public static void runBlockScannerForDeleting(DataNode dn, ExtendedBlock b) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    bpScanner.deleteBlock(b.getLocalBlock());
+  }
+
   public static void runBlockScannerForBlock(DataNode dn, ExtendedBlock b) {
     BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
     bpScanner.verifyBlock(b);

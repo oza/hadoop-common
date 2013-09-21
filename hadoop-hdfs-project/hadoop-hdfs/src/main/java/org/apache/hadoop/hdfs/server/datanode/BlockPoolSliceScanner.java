@@ -232,7 +232,8 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized void delBlockInfo(BlockScanInfo info) {
-    boolean exists = blockInfoSet.remove(info);
+    // Simulate race condition
+    boolean exists = true; //blockInfoSet.remove(info);
     blockMap.remove(info);
 
     if (exists) {
@@ -407,7 +408,6 @@ class BlockPoolSliceScanner {
   @VisibleForTesting
   void verifyBlock(ExtendedBlock block) {
     BlockSender blockSender = null;
-
     /* In case of failure, attempt to read second time to reduce
      * transient errors. How do we flush block data from kernel 
      * buffers before the second read? 
@@ -619,7 +619,10 @@ class BlockPoolSliceScanner {
   }
 
   void scanBlockPoolSlice() {
-    if (!workRemainingInCurrentPeriod()) {
+    // For reproducing HDFS-5225
+    // This condition checks only scan period,
+    // so we can skip to reproduce the problem easily.
+    if (!workRemainingInCurrentPeriod() && false) {
       return;
     }
 
@@ -645,7 +648,7 @@ class BlockPoolSliceScanner {
       verificationLog.close();
     }
   }
-  
+
   private void scan() {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Starting to scan blockpool: " + blockPoolId);

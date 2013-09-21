@@ -570,9 +570,17 @@ public class DFSTestUtil {
   }
   
   public static ExtendedBlock getFirstBlock(FileSystem fs, Path path) throws IOException {
-    HdfsDataInputStream in = (HdfsDataInputStream) fs.open(path);
-    in.readByte();
-    return in.getCurrentBlock();
+    HdfsDataInputStream in = null;
+    try {
+      in = (HdfsDataInputStream) fs.open(path);
+      in.readByte();
+      return in.getCurrentBlock();
+    } finally {
+      // To avoid "too many open files"
+      if (in != null) {
+        in.close();
+      }
+    }
   }  
 
   public static List<LocatedBlock> getAllBlocks(FSDataInputStream in)

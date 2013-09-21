@@ -18,17 +18,15 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
@@ -50,6 +49,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * This test verifies that block verification occurs on the datanode
@@ -497,5 +498,76 @@ public class TestDatanodeBlockScanner {
       IOUtils.closeStream(fs);
       cluster.shutdown();
     }
+  }
+
+
+  /**
+   *  This simulates DataXceiver thread which issues BlockPoolSliceScanner#deleteBlock
+   *  and BlockScanner thread which issues BlockPoolSliceScanner#scan in Datanode.
+   *  This test is intended to finish immediately.
+   *  If not, this may be in illegal state between these method, and outputs logs
+   *  infinitely(HFDS-5225).
+   */
+  @Test(timeout = 120000)
+  public void testSynchronizationOfScanAndDelete() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
+    Random random = new Random();
+    int rand = random.nextInt(3);
+    final MiniDFSCluster cluster;
+    final int numDataNodes = 1;
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+    cluster.waitActive();
+    final FileSystem fs = cluster.getFileSystem();
+    final FileSystem localFs = FileSystem.getLocal(conf);
+    Path file1 = new Path("/tmp/testBlockVerification/file1");
+    // Create large file to check.
+    final CyclicBarrier barrier = new CyclicBarrier(3);
+    final int ITERATION = 1;
+    // Wait until datanodes' threads wake up.
+    Thread.sleep(5500);
+
+    for (int i = 0; i < ITERATION; i++) {
+      DFSTestUtil.createFile(fs, file1, 1024*1024*128, (short)1, 0);
+      //final List<LocatedBlock> blocks = DFSTestUtil.getAllBlocks(fs, file1);
+      final ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, file1);
+      for (final DataNode dn : cluster.getDataNodes()) {
+        Runnable delete = new Runnable() {
+          public void run() {
+            try {
+              Path path = new Path(MiniDFSCluster.getBlockFile(0, b).getAbsolutePath());
+              if (localFs.exists(path)) {
+                DataNodeTestUtils.runBlockScannerForDeleting(dn, b);
+
+                // Simulate BlockReceiver#unfinializeBlock
+                dn.deleteBlockFromData(b);
+                localFs.delete(path, false);
+                barrier.await();
+              }
+            } catch (IOException ioe) {
+              fail("IOException:" + ioe);
+            } catch (BrokenBarrierException bbe) {
+              fail("Broken barrier! : " + bbe);
+            } catch (InterruptedException ie) {
+              fail("Interrupted." + ie);
+            }
+          }
+        };
+
+        Thread deleteThread = new Thread(delete);
+        deleteThread.start();
+        waitForBlockDeleted(b, 0, TIMEOUT);
+        // Wait forever.
+        barrier.await();
+
+        Thread.sleep(10000);
+
+        barrier.reset();
+        break;
+      }
+    }
+
+    cluster.shutdown();
   }
 }
