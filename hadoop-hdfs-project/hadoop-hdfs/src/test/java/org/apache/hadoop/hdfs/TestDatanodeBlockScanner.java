@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
@@ -50,6 +51,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import static org.junit.Assert.*;
 
 /**
  * This test verifies that block verification occurs on the datanode
@@ -497,5 +501,65 @@ public class TestDatanodeBlockScanner {
       IOUtils.closeStream(fs);
       cluster.shutdown();
     }
+  }
+
+
+  /**
+   *  Test synchronization between BlockPoolScanner#deleteBlock and
+   *  BlockPoolScanner#scan(HDFS-5225).
+   */
+  @Test(timeout = 120000)
+  public void testSynchronizationOfScanAndDelete() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
+    Random random = new Random();
+    int rand = random.nextInt(3);
+    final MiniDFSCluster cluster;
+    final int numDataNodes = 1;
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+    cluster.waitActive();
+    final FileSystem fs = cluster.getFileSystem();
+    final FileSystem localFs = FileSystem.getLocal(conf);
+    Path file1 = new Path("/tmp/testBlockVerification/file1");
+    // Create large file to check.
+    final CyclicBarrier barrier = new CyclicBarrier(2);
+    final int ITERATION = 100;
+
+    for (int i = 0; i < ITERATION; i++) {
+      DFSTestUtil.createFile(fs, file1, 1024*1024, (short)1, 0);
+      final ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, file1);
+      for (final DataNode dn : cluster.getDataNodes()) {
+        // Simlulate not-processed block
+        DataNodeTestUtils.addBlock(dn, b);
+        //mockProcessedBlocks.put(b.getBlockId(), 0);
+        assertTrue("This should return true",
+          DataNodeTestUtils.runBlockScannerForScanning(dn, b, false));
+
+        Runnable delete = new Runnable() {
+          public void run() {
+            try {
+              Path path = new Path(MiniDFSCluster.getBlockFile(0, b).getAbsolutePath());
+              if (localFs.exists(path)) {
+                DataNodeTestUtils.runBlockScannerForDeleting(dn, b);
+
+                localFs.delete(path, false);
+              }
+            } catch (IOException ioe) {
+              fail("IOException:" + ioe);
+            }
+          }
+        };
+
+        Thread deleteThread = new Thread(delete);
+        deleteThread.start();
+        waitForBlockDeleted(b, 0, TIMEOUT);
+        assertFalse("This should be false, because after deleting block",
+          DataNodeTestUtils.runBlockScannerForScanning(dn, b, false));
+        barrier.reset();
+      }
+    }
+
+    cluster.shutdown();
   }
 }

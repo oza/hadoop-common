@@ -949,6 +949,14 @@ public class DataNode extends Configured
   public int getXferPort() {
     return streamingAddr.getPort();
   }
+
+  @VisibleForTesting
+  public void deleteBlockFromData(ExtendedBlock b)
+   throws  IOException {
+    Block[] blocks = new Block[1];
+    blocks[0] = b.getLocalBlock();
+    this.data.invalidate(b.getBlockPoolId(), blocks);
+  }
   
   String getStorageId() {
     return storage.getStorageID();

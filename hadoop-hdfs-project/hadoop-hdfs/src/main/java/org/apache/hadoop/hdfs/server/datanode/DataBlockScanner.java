@@ -98,7 +98,7 @@ public class DataBlockScanner implements Runnable {
         removeBlockPool(currentBpId);
         continue;
       }
-      bpScanner.scanBlockPoolSlice();
+      bpScanner.scanBlockPoolSlice(true);
     }
 
     // Call shutdown for each allocated BlockPoolSliceScanner.

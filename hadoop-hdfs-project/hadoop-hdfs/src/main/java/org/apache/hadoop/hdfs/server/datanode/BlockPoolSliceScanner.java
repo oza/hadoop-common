@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -90,9 +91,9 @@ class BlockPoolSliceScanner {
   
   // processedBlocks keeps track of which blocks are scanned
   // since the last run.
-  private volatile HashMap<Long, Integer> processedBlocks;
+  private HashMap<Long, Integer> processedBlocks;
   
-  private long totalScans = 0;
+  private AtomicLong totalScans = new AtomicLong();
   private long totalScanErrors = 0;
   private long totalTransientErrors = 0;
   private final AtomicInteger totalBlocksScannedInLastRun = new AtomicInteger(); // Used for test only
@@ -289,7 +290,7 @@ class BlockPoolSliceScanner {
 
   @VisibleForTesting
   long getTotalScans() {
-    return totalScans;
+    return totalScans.get();
   }
 
   /** @return the last scan time for the block pool. */
@@ -471,7 +472,7 @@ class BlockPoolSliceScanner {
       } finally {
         IOUtils.closeStream(blockSender);
         datanode.getMetrics().incrBlocksVerified();
-        totalScans++;
+        totalScans.incrementAndGet();
       }
     }
   }
@@ -618,19 +619,20 @@ class BlockPoolSliceScanner {
     }
   }
 
-  void scanBlockPoolSlice() {
-    if (!workRemainingInCurrentPeriod()) {
-      return;
+  @VisibleForTesting
+  boolean scanBlockPoolSlice(boolean doVerify) {
+    if (!workRemainingInCurrentPeriod() && doVerify) {
+      return false;
     }
 
     // Create a new processedBlocks structure
     processedBlocks = new HashMap<Long, Integer>();
     if (!assignInitialVerificationTimes()) {
-      return;
+      return false;
     }
     // Start scanning
     try {
-      scan();
+      return scan(doVerify);
     } finally {
       totalBlocksScannedInLastRun.set(processedBlocks.size());
       lastScanTime.set(Time.now());
@@ -645,8 +647,25 @@ class BlockPoolSliceScanner {
       verificationLog.close();
     }
   }
-  
-  private void scan() {
+
+  private synchronized boolean tryVerifyFirstBlock(long now, boolean doVerify) {
+    if (((now - getEarliestScanTime()) >= scanPeriod)
+      || ((!blockInfoSet.isEmpty()) &&
+            !(this.isFirstBlockProcessed()))) {
+      if (doVerify) {
+        verifyFirstBlock();
+      }
+      return true;
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("All remaining blocks were processed recently, "
+          + "so this run is complete");
+      }
+      return false;
+    }
+  }
+
+  private boolean scan(boolean doVerify) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Starting to scan blockpool: " + blockPoolId);
     }
@@ -662,16 +681,7 @@ class BlockPoolSliceScanner {
             startNewPeriod();
           }
         }
-        if (((now - getEarliestScanTime()) >= scanPeriod)
-            || ((!blockInfoSet.isEmpty()) && !(this.isFirstBlockProcessed()))) {
-          verifyFirstBlock();
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("All remaining blocks were processed recently, "
-                + "so this run is complete");
-          }
-          break;
-        }
+        return tryVerifyFirstBlock(now, doVerify);
       }
     } catch (RuntimeException e) {
       LOG.warn("RuntimeException during BlockPoolScanner.scan()", e);
@@ -682,6 +692,7 @@ class BlockPoolSliceScanner {
         LOG.debug("Done scanning block pool: " + blockPoolId);
       }
     }
+    return false;
   }
   
   private synchronized void rollVerificationLogs() {

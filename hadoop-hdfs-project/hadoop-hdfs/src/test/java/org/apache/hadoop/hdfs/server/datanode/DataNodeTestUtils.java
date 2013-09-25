@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -113,7 +115,23 @@ public class DataNodeTestUtils {
     return DataNode.createInterDataNodeProtocolProxy(datanodeid, conf,
         dn.getDnConf().socketTimeout, dn.getDnConf().connectToDnViaHostname);
   }
-  
+
+  public static void runBlockScannerForDeleting(DataNode dn, ExtendedBlock b) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    bpScanner.deleteBlock(b.getLocalBlock());
+  }
+
+  public static void addBlock(DataNode dn, ExtendedBlock b) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    bpScanner.addBlock(b);
+  }
+
+  public static boolean runBlockScannerForScanning(DataNode dn,
+      ExtendedBlock b, boolean verify) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    return bpScanner.scanBlockPoolSlice(verify);
+  }
+
   public static void runBlockScannerForBlock(DataNode dn, ExtendedBlock b) {
     BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
     bpScanner.verifyBlock(b);
