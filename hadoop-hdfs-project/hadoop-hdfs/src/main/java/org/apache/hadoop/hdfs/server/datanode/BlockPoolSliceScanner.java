@@ -483,7 +483,8 @@ class BlockPoolSliceScanner {
     return Long.MAX_VALUE; 
   }
   
-  private synchronized boolean isFirstBlockProcessed() {
+  private synchronized boolean isFirstBlockProcessed(
+    HashMap<Long, Integer> processedBlocks) {
     if (!blockInfoSet.isEmpty()) {
       long blockId = blockInfoSet.first().getBlockId();
       if ((processedBlocks.get(blockId) != null)
@@ -645,6 +646,25 @@ class BlockPoolSliceScanner {
       verificationLog.close();
     }
   }
+
+  @VisibleForTesting
+  synchronized boolean tryVerifyFirstBlock(long now, boolean doVerify,
+     HashMap<Long, Integer> processedBlocks) {
+    if (((now - getEarliestScanTime()) >= scanPeriod)
+      || ((!blockInfoSet.isEmpty()) &&
+            !(this.isFirstBlockProcessed(processedBlocks)))) {
+      if (doVerify) {
+        verifyFirstBlock();
+      }
+      return true;
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("All remaining blocks were processed recently, "
+          + "so this run is complete");
+      }
+      return false;
+    }
+  }
   
   private void scan() {
     if (LOG.isDebugEnabled()) {
@@ -662,16 +682,7 @@ class BlockPoolSliceScanner {
             startNewPeriod();
           }
         }
-        if (((now - getEarliestScanTime()) >= scanPeriod)
-            || ((!blockInfoSet.isEmpty()) && !(this.isFirstBlockProcessed()))) {
-          verifyFirstBlock();
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("All remaining blocks were processed recently, "
-                + "so this run is complete");
-          }
-          break;
-        }
+        tryVerifyFirstBlock(now, true, processedBlocks);
       }
     } catch (RuntimeException e) {
       LOG.warn("RuntimeException during BlockPoolScanner.scan()", e);

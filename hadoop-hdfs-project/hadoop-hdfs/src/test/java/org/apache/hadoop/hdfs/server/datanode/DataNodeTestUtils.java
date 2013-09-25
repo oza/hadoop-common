@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -113,7 +114,24 @@ public class DataNodeTestUtils {
     return DataNode.createInterDataNodeProtocolProxy(datanodeid, conf,
         dn.getDnConf().socketTimeout, dn.getDnConf().connectToDnViaHostname);
   }
-  
+
+  public static void runBlockScannerForDeleting(DataNode dn, ExtendedBlock b) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    bpScanner.deleteBlock(b.getLocalBlock());
+  }
+
+  public static void addBlock(DataNode dn, ExtendedBlock b) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    bpScanner.addBlock(b);
+  }
+
+  public static boolean runBlockScannerTryVerifyFirstBlock(DataNode dn,
+      ExtendedBlock b, long now, boolean verify,
+      HashMap<Long, Integer> mockProcessedBlock) {
+    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
+    return bpScanner.tryVerifyFirstBlock(now, verify, mockProcessedBlock);
+  }
+
   public static void runBlockScannerForBlock(DataNode dn, ExtendedBlock b) {
     BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
     bpScanner.verifyBlock(b);
