@@ -19,10 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 import javax.crypto.SecretKey;
 
@@ -32,9 +29,13 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.service.LifecycleEvent;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.SecretManagementService;
 
 /**
  * AMRM-tokens are per ApplicationAttempt. If users redistribute their
@@ -44,14 +45,18 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
  * so no need to remember master-keys even after rolling them.
  */
 public class AMRMTokenSecretManager extends
-    SecretManager<AMRMTokenIdentifier> {
+    SecretManager<AMRMTokenIdentifier> implements Service {
 
   private static final Log LOG = LogFactory
     .getLog(AMRMTokenSecretManager.class);
 
+  private final SecretManagementService secretManagementService
+    = new SecretManagementService(AMRMTokenSecretManager.class.getName());
   private SecretKey masterKey;
   private final Timer timer;
   private final long rollingInterval;
+
+
 
   private final Map<ApplicationAttemptId, byte[]> passwords =
       new HashMap<ApplicationAttemptId, byte[]>();
@@ -67,14 +72,6 @@ public class AMRMTokenSecretManager extends
           .getLong(
             YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
             YarnConfiguration.DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
-  }
-
-  public void start() {
-    this.timer.scheduleAtFixedRate(new MasterKeyRoller(), 0, rollingInterval);
-  }
-
-  public void stop() {
-    this.timer.cancel();
   }
 
   public synchronized void applicationMasterFinished(
@@ -167,4 +164,85 @@ public class AMRMTokenSecretManager extends
     return new AMRMTokenIdentifier();
   }
 
+  @Override
+  public void init(Configuration config) {
+    secretManagementService.init(config);
+  }
+
+  @Override
+  public void start() {
+    secretManagementService.start();
+    this.timer.scheduleAtFixedRate(new MasterKeyRoller(), 0, rollingInterval);
+  }
+
+  @Override
+  public void stop() {
+    this.timer.cancel();
+    secretManagementService.stop();
+  }
+
+  @Override
+  public void close() throws IOException {
+    secretManagementService.close();
+  }
+
+  @Override
+  public void registerServiceListener(ServiceStateChangeListener listener) {
+    secretManagementService.registerServiceListener(listener);
+  }
+
+  @Override
+  public void unregisterServiceListener(ServiceStateChangeListener listener) {
+    secretManagementService.unregisterServiceListener(listener);
+  }
+
+  @Override
+  public String getName() {
+    return secretManagementService.getName();
+  }
+
+  @Override
+  public Configuration getConfig() {
+    return secretManagementService.getConfig();
+  }
+
+  @Override
+  public STATE getServiceState() {
+    return secretManagementService.getServiceState();
+  }
+
+  @Override
+  public long getStartTime() {
+    return secretManagementService.getStartTime();
+  }
+
+  @Override
+  public boolean isInState(STATE state) {
+    return secretManagementService.isInState(state);
+  }
+
+  @Override
+  public Throwable getFailureCause() {
+    return secretManagementService.getFailureCause();
+  }
+
+  @Override
+  public STATE getFailureState() {
+    return secretManagementService.getFailureState();
+  }
+
+  @Override
+  public boolean waitForServiceToStop(long timeout) {
+    return secretManagementService.waitForServiceToStop(timeout);
+  }
+
+  @Override
+  public List<LifecycleEvent> getLifecycleHistory() {
+    return secretManagementService.getLifecycleHistory();
+  }
+
+  @Override
+  public Map<String, String> getBlockers() {
+    return secretManagementService.getBlockers();
+  }
 }

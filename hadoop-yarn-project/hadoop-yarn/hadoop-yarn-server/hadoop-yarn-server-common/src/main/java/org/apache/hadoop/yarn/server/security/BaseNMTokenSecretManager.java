@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.yarn.server.security;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -27,28 +30,38 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.service.LifecycleEvent;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.SecretManagementService;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 public class BaseNMTokenSecretManager extends
-    SecretManager<NMTokenIdentifier> {
+    SecretManager<NMTokenIdentifier> implements Service {
 
   private static Log LOG = LogFactory
       .getLog(BaseNMTokenSecretManager.class);
 
   private int serialNo = new SecureRandom().nextInt();
+  private final SecretManagementService secretManagementService;
 
   protected final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
   protected final Lock readLock = readWriteLock.readLock();
   protected final Lock writeLock = readWriteLock.writeLock();
 
   protected MasterKeyData currentMasterKey;
+
+  public BaseNMTokenSecretManager(String serviceName) {
+    secretManagementService = new SecretManagementService(serviceName);
+  }
   
   protected MasterKeyData createNewMasterKey() {
     this.writeLock.lock();
@@ -147,5 +160,85 @@ public class BaseNMTokenSecretManager extends
           NMTokenIdentifier.KIND.toString(), password, SecurityUtil
             .buildTokenService(addr).toString());
     return nmToken;
+  }
+
+  @Override
+  public void init(Configuration config) {
+    secretManagementService.init(config);
+  }
+
+  @Override
+  public void start() {
+    secretManagementService.start();
+  }
+
+  @Override
+  public void stop() {
+    secretManagementService.stop();
+  }
+
+  @Override
+  public void close() throws IOException {
+    secretManagementService.close();
+  }
+
+  @Override
+  public void registerServiceListener(ServiceStateChangeListener listener) {
+    secretManagementService.registerServiceListener(listener);
+  }
+
+  @Override
+  public void unregisterServiceListener(ServiceStateChangeListener listener) {
+    secretManagementService.unregisterServiceListener(listener);
+  }
+
+  @Override
+  public String getName() {
+    return secretManagementService.getName();
+  }
+
+  @Override
+  public Configuration getConfig() {
+    return secretManagementService.getConfig();
+  }
+
+  @Override
+  public STATE getServiceState() {
+    return secretManagementService.getServiceState();
+  }
+
+  @Override
+  public long getStartTime() {
+    return secretManagementService.getStartTime();
+  }
+
+  @Override
+  public boolean isInState(STATE state) {
+    return secretManagementService.isInState(state);
+  }
+
+  @Override
+  public Throwable getFailureCause() {
+    return secretManagementService.getFailureCause();
+  }
+
+  @Override
+  public STATE getFailureState() {
+    return secretManagementService.getFailureState();
+  }
+
+  @Override
+  public boolean waitForServiceToStop(long timeout) {
+    return secretManagementService.waitForServiceToStop(timeout);
+  }
+
+  @Override
+  public List<LifecycleEvent> getLifecycleHistory() {
+    return secretManagementService.getLifecycleHistory();
+  }
+
+  @Override
+  public Map<String, String> getBlockers() {
+    return secretManagementService.getBlockers();
   }
 }

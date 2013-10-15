@@ -33,6 +33,10 @@ public class ClientToAMTokenSecretManagerInRM extends
   private Map<ApplicationAttemptId, SecretKey> masterKeys =
       new HashMap<ApplicationAttemptId, SecretKey>();
 
+  public ClientToAMTokenSecretManagerInRM() {
+    super(ClientToAMTokenSecretManagerInRM.class.getName());
+  }
+
   public synchronized SecretKey createMasterKey(
       ApplicationAttemptId applicationAttemptID) {
     return generateSecret();

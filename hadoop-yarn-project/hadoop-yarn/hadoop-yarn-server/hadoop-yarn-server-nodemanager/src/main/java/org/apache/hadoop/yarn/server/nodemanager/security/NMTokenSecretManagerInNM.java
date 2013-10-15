@@ -49,6 +49,7 @@ public class NMTokenSecretManagerInNM extends BaseNMTokenSecretManager {
   
   
   public NMTokenSecretManagerInNM() {
+    super(NMTokenSecretManagerInNM.class.getName());
     this.oldMasterKeys =
         new HashMap<ApplicationAttemptId, MasterKeyData>();
     appToAppAttemptMap =         

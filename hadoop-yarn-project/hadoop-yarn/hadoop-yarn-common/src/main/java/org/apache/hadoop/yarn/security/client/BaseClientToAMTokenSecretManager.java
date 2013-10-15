@@ -23,8 +23,16 @@ import javax.crypto.SecretKey;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.service.LifecycleEvent;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A base {@link SecretManager} for AMs to extend and validate Client-RM tokens
@@ -36,7 +44,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 @Public
 @Evolving
 public abstract class BaseClientToAMTokenSecretManager extends
-    SecretManager<ClientToAMTokenIdentifier> {
+    SecretManager<ClientToAMTokenIdentifier> implements Service {
+
+  final SecretManagementService secretManagementService;
+
+
+  public BaseClientToAMTokenSecretManager(String serviceName) {
+    secretManagementService = new SecretManagementService(serviceName);
+  }
 
   @Private
   public abstract SecretKey getMasterKey(
@@ -67,4 +82,83 @@ public abstract class BaseClientToAMTokenSecretManager extends
     return new ClientToAMTokenIdentifier();
   }
 
+  @Override
+  public void init(Configuration config) {
+    secretManagementService.init(config);
+  }
+
+  @Override
+  public void start() {
+    secretManagementService.start();
+  }
+
+  @Override
+  public void stop() {
+    secretManagementService.stop();
+  }
+
+  @Override
+  public void close() throws IOException {
+    secretManagementService.close();
+  }
+
+  @Override
+  public void registerServiceListener(ServiceStateChangeListener listener) {
+    secretManagementService.registerServiceListener(listener);
+  }
+
+  @Override
+  public void unregisterServiceListener(ServiceStateChangeListener listener) {
+    secretManagementService.unregisterServiceListener(listener);
+  }
+
+  @Override
+  public String getName() {
+    return secretManagementService.getName();
+  }
+
+  @Override
+  public Configuration getConfig() {
+    return secretManagementService.getConfig();
+  }
+
+  @Override
+  public STATE getServiceState() {
+    return secretManagementService.getServiceState();
+  }
+
+  @Override
+  public long getStartTime() {
+    return secretManagementService.getStartTime();
+  }
+
+  @Override
+  public boolean isInState(STATE state) {
+    return secretManagementService.isInState(state);
+  }
+
+  @Override
+  public Throwable getFailureCause() {
+    return secretManagementService.getFailureCause();
+  }
+
+  @Override
+  public STATE getFailureState() {
+    return secretManagementService.getFailureState();
+  }
+
+  @Override
+  public boolean waitForServiceToStop(long timeout) {
+    return secretManagementService.waitForServiceToStop(timeout);
+  }
+
+  @Override
+  public List<LifecycleEvent> getLifecycleHistory() {
+    return secretManagementService.getLifecycleHistory();
+  }
+
+  @Override
+  public Map<String, String> getBlockers() {
+    return secretManagementService.getBlockers();
+  }
 }
