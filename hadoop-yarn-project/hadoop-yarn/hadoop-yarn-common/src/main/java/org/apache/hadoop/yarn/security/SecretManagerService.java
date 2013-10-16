@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.security.client;
+package org.apache.hadoop.yarn.security;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -27,10 +27,10 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.LifecycleEvent;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * SecretManager wrapper class for YARN to treat ServiceManager as Service.
@@ -42,6 +42,7 @@ public abstract class SecretManagerService<T extends TokenIdentifier> extends
   private final InternalSecretManagerService secretManagerService;
 
   class InternalSecretManagerService extends AbstractService {
+    ArrayList<ServiceHandler> serviceHandlers;
     /**
      * Construct the service.
      *
@@ -49,11 +50,39 @@ public abstract class SecretManagerService<T extends TokenIdentifier> extends
      */
     public InternalSecretManagerService(String name) {
       super(name);
+      serviceHandlers = new ArrayList<ServiceHandler>();
+    }
+
+    @Override
+    protected void serviceInit(Configuration conf) throws Exception {
+      for (ServiceHandler handler :serviceHandlers){
+        handler.serviceInit(conf);
+      }
+    }
+    @Override
+    protected void serviceStart() throws Exception {
+      for (ServiceHandler handler :serviceHandlers){
+        handler.serviceStart();
+      }
+    }
+    @Override
+    protected void serviceStop() throws Exception {
+      // serviceStop callbacks handlers in reverse order of
+      // "serviceStart" method.
+      Collections.reverse(serviceHandlers);
+      try {
+        for (ServiceHandler handler : serviceHandlers){
+          handler.serviceStop();
+        }
+      } finally {
+        Collections.reverse(serviceHandlers);
+      }
     }
   }
 
   public SecretManagerService(String serviceName) {
-    secretManagerService = new InternalSecretManagerService(serviceName);
+    secretManagerService =
+      new InternalSecretManagerService(serviceName);
   }
 
   @Override
@@ -135,4 +164,5 @@ public abstract class SecretManagerService<T extends TokenIdentifier> extends
   public Map<String, String> getBlockers() {
     return secretManagerService.getBlockers();
   }
+
 }

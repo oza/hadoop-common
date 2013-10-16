@@ -34,7 +34,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.SecretManagerService;
+import org.apache.hadoop.yarn.security.SecretManagerService;
 
 /**
  * AMRM-tokens are per ApplicationAttempt. If users redistribute their

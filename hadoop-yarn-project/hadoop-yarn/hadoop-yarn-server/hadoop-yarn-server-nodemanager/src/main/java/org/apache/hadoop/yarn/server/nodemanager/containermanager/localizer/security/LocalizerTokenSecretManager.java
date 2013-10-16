@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sec
 
 import javax.crypto.SecretKey;
 
-import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.yarn.security.client.SecretManagerService;
+import org.apache.hadoop.yarn.security.SecretManagerService;
 
 public class LocalizerTokenSecretManager extends
     SecretManagerService<LocalizerTokenIdentifier> {

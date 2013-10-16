@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.SecretManagerService;
+import org.apache.hadoop.yarn.security.SecretManagerService;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 /**
