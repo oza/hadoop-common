@@ -55,7 +55,7 @@ public class RMContainerTokenSecretManager extends
   private final long activationDelay;
 
   public RMContainerTokenSecretManager(Configuration conf) {
-    super(conf);
+    super(RMContainerTokenSecretManager.class.getName(), conf);
 
     this.timer = new Timer();
     this.rollingInterval = conf.getLong(

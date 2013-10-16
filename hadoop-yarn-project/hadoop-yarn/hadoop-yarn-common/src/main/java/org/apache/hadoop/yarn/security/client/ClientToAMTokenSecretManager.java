@@ -42,7 +42,7 @@ public class ClientToAMTokenSecretManager extends
 
   public ClientToAMTokenSecretManager(
       ApplicationAttemptId applicationAttemptID, byte[] key) {
-    super();
+    super(ClientToAMTokenSecretManager.class.getName());
     if (key !=  null) {
       this.masterKey = SecretManager.createSecretKey(key);
     } else {

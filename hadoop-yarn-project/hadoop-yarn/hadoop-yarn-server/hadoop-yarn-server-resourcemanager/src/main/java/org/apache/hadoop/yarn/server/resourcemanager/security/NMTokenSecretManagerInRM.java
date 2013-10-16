@@ -57,6 +57,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   private final ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>> appAttemptToNodeKeyMap;
   
   public NMTokenSecretManagerInRM(Configuration conf) {
+    super(NMTokenSecretManagerInRM.class.getName());
     this.conf = conf;
     timer = new Timer();
     rollingInterval = this.conf.getLong(

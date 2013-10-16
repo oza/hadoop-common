@@ -30,11 +30,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.SecretManagerService;
 
 /**
  * AMRM-tokens are per ApplicationAttempt. If users redistribute their
@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
  * so no need to remember master-keys even after rolling them.
  */
 public class AMRMTokenSecretManager extends
-    SecretManager<AMRMTokenIdentifier> {
+    SecretManagerService<AMRMTokenIdentifier> {
 
   private static final Log LOG = LogFactory
     .getLog(AMRMTokenSecretManager.class);
@@ -60,6 +60,7 @@ public class AMRMTokenSecretManager extends
    * Create an {@link AMRMTokenSecretManager}
    */
   public AMRMTokenSecretManager(Configuration conf) {
+    super(AMRMTokenSecretManager.class.getName());
     rollMasterKey();
     this.timer = new Timer();
     this.rollingInterval =

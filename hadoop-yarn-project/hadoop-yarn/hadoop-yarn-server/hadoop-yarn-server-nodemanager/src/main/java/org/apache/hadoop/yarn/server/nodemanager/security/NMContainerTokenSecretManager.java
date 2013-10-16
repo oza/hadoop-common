@@ -54,7 +54,7 @@ public class NMContainerTokenSecretManager extends
   private String nodeHostAddr;
   
   public NMContainerTokenSecretManager(Configuration conf) {
-    super(conf);
+    super(NMContainerTokenSecretManager.class.getName(), conf);
     recentlyStartedContainerTracker =
         new TreeMap<Long, List<ContainerId>>();
   }

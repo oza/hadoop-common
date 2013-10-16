@@ -21,13 +21,15 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sec
 import javax.crypto.SecretKey;
 
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.yarn.security.client.SecretManagerService;
 
 public class LocalizerTokenSecretManager extends
-    SecretManager<LocalizerTokenIdentifier> {
+    SecretManagerService<LocalizerTokenIdentifier> {
 
   private final SecretKey secretKey;
   
   public LocalizerTokenSecretManager() {
+    super(LocalizerTokenSecretManager.class.getName());
     this.secretKey = generateSecret();
   }
   

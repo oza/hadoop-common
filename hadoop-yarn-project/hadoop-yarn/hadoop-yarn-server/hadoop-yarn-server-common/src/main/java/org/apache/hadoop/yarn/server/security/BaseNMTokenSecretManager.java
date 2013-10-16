@@ -34,10 +34,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.SecretManagerService;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 public class BaseNMTokenSecretManager extends
-    SecretManager<NMTokenIdentifier> {
+    SecretManagerService<NMTokenIdentifier> {
 
   private static Log LOG = LogFactory
       .getLog(BaseNMTokenSecretManager.class);
@@ -49,7 +50,11 @@ public class BaseNMTokenSecretManager extends
   protected final Lock writeLock = readWriteLock.writeLock();
 
   protected MasterKeyData currentMasterKey;
-  
+
+  public BaseNMTokenSecretManager(String serviceName) {
+    super(serviceName);
+  }
+
   protected MasterKeyData createNewMasterKey() {
     this.writeLock.lock();
     try {

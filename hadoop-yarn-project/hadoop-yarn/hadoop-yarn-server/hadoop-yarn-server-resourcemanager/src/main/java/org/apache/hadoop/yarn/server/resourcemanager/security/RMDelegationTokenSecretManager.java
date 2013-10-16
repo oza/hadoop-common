@@ -29,9 +29,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.yarn.security.client.DelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -47,7 +47,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class RMDelegationTokenSecretManager extends
-    AbstractDelegationTokenSecretManager<RMDelegationTokenIdentifier> implements
+  DelegationTokenSecretManagerService<RMDelegationTokenIdentifier> implements
     Recoverable {
   private static final Log LOG = LogFactory
       .getLog(RMDelegationTokenSecretManager.class);
@@ -69,7 +69,8 @@ public class RMDelegationTokenSecretManager extends
                                       long delegationTokenRenewInterval,
                                       long delegationTokenRemoverScanInterval,
                                       RMContext rmContext) {
-    super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
+    super(RMDelegationTokenSecretManager.class.getName(),
+          delegationKeyUpdateInterval, delegationTokenMaxLifetime,
           delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
     this.rmContext = rmContext;
   }

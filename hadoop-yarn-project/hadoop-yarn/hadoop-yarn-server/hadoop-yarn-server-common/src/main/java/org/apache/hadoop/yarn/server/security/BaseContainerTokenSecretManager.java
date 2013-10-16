@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.SecretManagerService;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 /**
@@ -38,7 +39,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
  * 
  */
 public class BaseContainerTokenSecretManager extends
-    SecretManager<ContainerTokenIdentifier> {
+    SecretManagerService<ContainerTokenIdentifier> {
 
   private static Log LOG = LogFactory
     .getLog(BaseContainerTokenSecretManager.class);
@@ -58,7 +59,9 @@ public class BaseContainerTokenSecretManager extends
 
   protected final long containerTokenExpiryInterval;
 
-  public BaseContainerTokenSecretManager(Configuration conf) {
+  public BaseContainerTokenSecretManager(String serviceName,
+                                         Configuration conf) {
+    super(serviceName);
     this.containerTokenExpiryInterval =
         conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
           YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);

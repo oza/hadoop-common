@@ -36,7 +36,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 @Public
 @Evolving
 public abstract class BaseClientToAMTokenSecretManager extends
-    SecretManager<ClientToAMTokenIdentifier> {
+    SecretManagerService<ClientToAMTokenIdentifier> {
+
+  public BaseClientToAMTokenSecretManager(String serviceName) {
+    super(serviceName);
+  }
 
   @Private
   public abstract SecretKey getMasterKey(
