@@ -75,7 +75,7 @@ import org.apache.zookeeper.ZooKeeper;
 
 import org.junit.Test;
 
-public class TestRMStateStore extends ClientBaseWithFixes{
+public class TestRMStateStore extends ClientBaseWithFixes {
 
   public static final Log LOG = LogFactory.getLog(TestRMStateStore.class);
 
@@ -274,7 +274,7 @@ public class TestRMStateStore extends ClientBaseWithFixes{
     store.setRMDispatcher(dispatcher);
 
     AMRMTokenSecretManager appTokenMgr =
-        new AMRMTokenSecretManager(conf);
+        new AMRMTokenSecretManager();
     ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
         new ClientToAMTokenSecretManagerInRM();
 

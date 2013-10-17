@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.SecretManagerService;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 
 /**
  * AMRM-tokens are per ApplicationAttempt. If users redistribute their
@@ -50,32 +51,47 @@ public class AMRMTokenSecretManager extends
     .getLog(AMRMTokenSecretManager.class);
 
   private SecretKey masterKey;
-  private final Timer timer;
-  private final long rollingInterval;
 
   private final Map<ApplicationAttemptId, byte[]> passwords =
       new HashMap<ApplicationAttemptId, byte[]>();
 
-  /**
-   * Create an {@link AMRMTokenSecretManager}
-   */
-  public AMRMTokenSecretManager(Configuration conf) {
-    super(AMRMTokenSecretManager.class.getName());
-    rollMasterKey();
-    this.timer = new Timer();
-    this.rollingInterval =
+  private class AMRMTokenServiceHandler implements ServiceHandler {
+    private Timer timer;
+    private long rollingInterval;
+
+    @Override
+    public void serviceInit(Configuration conf) throws Exception {
+      this.timer = new Timer();
+      this.rollingInterval =
         conf
           .getLong(
             YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
             YarnConfiguration.DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+      this.timer.scheduleAtFixedRate(new MasterKeyRoller(), 0, rollingInterval);
+    }
+
+    @Override
+    public void serviceStop() throws Exception {
+      this.timer.cancel();
+    }
   }
 
-  public void start() {
-    this.timer.scheduleAtFixedRate(new MasterKeyRoller(), 0, rollingInterval);
+  /**
+   * Create an {@link AMRMTokenSecretManager}
+   */
+  public AMRMTokenSecretManager() {
+    super(AMRMTokenSecretManager.class.getName());
+    registerServiceHandler(new AMRMTokenServiceHandler());
+    rollMasterKey();
   }
 
-  public void stop() {
-    this.timer.cancel();
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+
   }
 
   public synchronized void applicationMasterFinished(

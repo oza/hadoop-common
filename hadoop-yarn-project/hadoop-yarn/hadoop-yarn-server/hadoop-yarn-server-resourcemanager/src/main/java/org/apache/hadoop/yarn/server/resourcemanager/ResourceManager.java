@@ -216,9 +216,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new AsyncDispatcher();
   }
 
-  protected AMRMTokenSecretManager createAMRMTokenSecretManager(
-      Configuration conf) {
-    return new AMRMTokenSecretManager(conf);
+  protected AMRMTokenSecretManager createAMRMTokenSecretManager() {
+    return new AMRMTokenSecretManager();
   }
 
   protected ResourceScheduler createScheduler() {
@@ -305,7 +304,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmDispatcher = createDispatcher();
       addIfService(rmDispatcher);
 
-      amRmTokenSecretManager = createAMRMTokenSecretManager(conf);
+      amRmTokenSecretManager = createAMRMTokenSecretManager();
+      addService(amRmTokenSecretManager);
 
       containerAllocationExpirer = new ContainerAllocationExpirer(rmDispatcher);
       addService(containerAllocationExpirer);
