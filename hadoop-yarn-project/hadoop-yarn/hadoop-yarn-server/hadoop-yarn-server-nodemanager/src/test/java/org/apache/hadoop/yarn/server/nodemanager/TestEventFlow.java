@@ -78,7 +78,7 @@ public class TestEventFlow {
 
     YarnConfiguration conf = new YarnConfiguration();
     
-    Context context = new NMContext(new NMContainerTokenSecretManager(conf),
+    Context context = new NMContext(new NMContainerTokenSecretManager(),
         new NMTokenSecretManagerInNM(), null, null) {
       @Override
       public int getHttpPort() {

@@ -32,6 +32,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
@@ -48,15 +49,31 @@ public class NMContainerTokenSecretManager extends
       .getLog(NMContainerTokenSecretManager.class);
   
   private MasterKeyData previousMasterKey;
-  private final TreeMap<Long, List<ContainerId>> recentlyStartedContainerTracker;
+  private TreeMap<Long, List<ContainerId>> recentlyStartedContainerTracker;
 
   
   private String nodeHostAddr;
+
+  private class NMContainerTokenSecretServiceHandler implements ServiceHandler {
+
+    @Override
+    public void serviceInit(Configuration conf) throws Exception {
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+    }
+
+    @Override
+    public void serviceStop() throws Exception {
+    }
+  }
   
-  public NMContainerTokenSecretManager(Configuration conf) {
-    super(NMContainerTokenSecretManager.class.getName(), conf);
+  public NMContainerTokenSecretManager() {
+    super(NMContainerTokenSecretManager.class.getName());
+    registerServiceHandler(new NMContainerTokenSecretServiceHandler());
     recentlyStartedContainerTracker =
-        new TreeMap<Long, List<ContainerId>>();
+      new TreeMap<Long, List<ContainerId>>();
   }
 
   /**

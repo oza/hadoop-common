@@ -515,7 +515,7 @@ public class TestApplication {
       context = mock(Context.class);
       
       when(context.getContainerTokenSecretManager()).thenReturn(
-        new NMContainerTokenSecretManager(conf));
+        new NMContainerTokenSecretManager());
       when(context.getApplicationACLsManager()).thenReturn(
         new ApplicationACLsManager(conf));
       when(context.getNMTokenSecretManager()).thenReturn(nmTokenSecretMgr);

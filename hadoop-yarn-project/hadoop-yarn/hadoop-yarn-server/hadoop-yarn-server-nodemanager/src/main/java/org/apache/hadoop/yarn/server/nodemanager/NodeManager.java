@@ -130,7 +130,8 @@ public class NodeManager extends CompositeService
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
     NMContainerTokenSecretManager containerTokenSecretManager =
-        new NMContainerTokenSecretManager(conf);
+        new NMContainerTokenSecretManager();
+    addService(containerTokenSecretManager);
 
     NMTokenSecretManagerInNM nmTokenSecretManager =
         new NMTokenSecretManagerInNM();
