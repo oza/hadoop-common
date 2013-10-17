@@ -21,14 +21,13 @@ package org.apache.hadoop.yarn.security.client;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.LifecycleEvent;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
+import org.apache.hadoop.yarn.security.SecretManagerServiceInternal;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 
 import java.io.IOException;
 import java.util.List;
@@ -42,18 +41,7 @@ import java.util.Map;
 public abstract
 class DelegationTokenSecretManagerService<T extends AbstractDelegationTokenIdentifier>
   extends AbstractDelegationTokenSecretManager<T> implements Service {
-  private final InternalSecretManagerService secretManagerService;
-
-  class InternalSecretManagerService extends AbstractService {
-    /**
-     * Construct the service.
-     *
-     * @param name service name
-     */
-    public InternalSecretManagerService(String name) {
-      super(name);
-    }
-  }
+  private final SecretManagerServiceInternal secretManagerService;
 
   public DelegationTokenSecretManagerService(String serviceName,
                                              long delegationKeyUpdateInterval,
@@ -62,7 +50,7 @@ class DelegationTokenSecretManagerService<T extends AbstractDelegationTokenIdent
                                              long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
       delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
-    secretManagerService = new InternalSecretManagerService(serviceName);
+    secretManagerService = new SecretManagerServiceInternal(serviceName);
   }
 
   @Override
@@ -143,5 +131,9 @@ class DelegationTokenSecretManagerService<T extends AbstractDelegationTokenIdent
   @Override
   public Map<String, String> getBlockers() {
     return secretManagerService.getBlockers();
+  }
+
+  public void registerServiceHandler(ServiceHandler handler) {
+    secretManagerService.registerServiceHandler(handler);
   }
 }

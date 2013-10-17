@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
@@ -49,43 +50,60 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
       .getLog(NMTokenSecretManagerInRM.class);
 
   private MasterKeyData nextMasterKey;
-  private Configuration conf;
 
-  private final Timer timer;
-  private final long rollingInterval;
-  private final long activationDelay;
+  private Timer timer;
+  private long rollingInterval;
+  private long activationDelay;
   private final ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>> appAttemptToNodeKeyMap;
-  
-  public NMTokenSecretManagerInRM(Configuration conf) {
-    super(NMTokenSecretManagerInRM.class.getName());
-    this.conf = conf;
-    timer = new Timer();
-    rollingInterval = this.conf.getLong(
+
+  private class NMTokenSecretServiceHandler implements ServiceHandler {
+
+    @Override
+    public void serviceInit(Configuration conf) throws Exception {
+      timer = new Timer();
+      rollingInterval = conf.getLong(
         YarnConfiguration.RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
         YarnConfiguration.DEFAULT_RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS)
         * 1000;
-    // Add an activation delay. This is to address the following race: RM may
-    // roll over master-key, scheduling may happen at some point of time, an
-    // NMToken created with a password generated off new master key, but NM
-    // might not have come again to RM to update the shared secret: so AM has a
-    // valid password generated off new secret but NM doesn't know about the
-    // secret yet.
-    // Adding delay = 1.5 * expiry interval makes sure that all active NMs get
-    // the updated shared-key.
-    this.activationDelay =
+      // Add an activation delay. This is to address the following race: RM may
+      // roll over master-key, scheduling may happen at some point of time, an
+      // NMToken created with a password generated off new master key, but NM
+      // might not have come again to RM to update the shared secret: so AM has a
+      // valid password generated off new secret but NM doesn't know about the
+      // secret yet.
+      // Adding delay = 1.5 * expiry interval makes sure that all active NMs get
+      // the updated shared-key.
+      activationDelay =
         (long) (conf.getLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS) * 1.5);
-    LOG.info("NMTokenKeyRollingInterval: " + this.rollingInterval
-        + "ms and NMTokenKeyActivationDelay: " + this.activationDelay
+          YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS) * 1.5);
+      LOG.info("NMTokenKeyRollingInterval: " + rollingInterval
+        + "ms and NMTokenKeyActivationDelay: " + activationDelay
         + "ms");
-    if (rollingInterval <= activationDelay * 2) {
-      throw new IllegalArgumentException(
+      if (rollingInterval <= activationDelay * 2) {
+        throw new IllegalArgumentException(
           YarnConfiguration.RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS
-              + " should be more than 2 X "
-              + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS);
+            + " should be more than 2 X "
+            + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS);
+      }
     }
+
+    @Override
+    public void serviceStart() throws Exception {
+      rollMasterKey();
+      timer.scheduleAtFixedRate(new MasterKeyRoller(), rollingInterval,
+        rollingInterval);
+    }
+
+    @Override
+    public void serviceStop() throws Exception {
+      timer.cancel();
+    }
+  }
+  
+  public NMTokenSecretManagerInRM() {
+    super(NMTokenSecretManagerInRM.class.getName());
     appAttemptToNodeKeyMap =
-        new ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>>();
+      new ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>>();
   }
   
   /**
@@ -150,16 +168,6 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
     while (nodeSetI.hasNext()) {
       nodeSetI.next().clear();
     }
-  }
-
-  public void start() {
-    rollMasterKey();
-    this.timer.scheduleAtFixedRate(new MasterKeyRoller(), rollingInterval,
-        rollingInterval);
-  }
-
-  public void stop() {
-    this.timer.cancel();
   }
 
   private class MasterKeyRoller extends TimerTask {

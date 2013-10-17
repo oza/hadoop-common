@@ -111,14 +111,12 @@ public class TestClientRMService {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
     dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000, rmContext);
-    dtsm.startThreads();  
+    dtsm.init(new Configuration());
   }
 
   @AfterClass
   public static void teardownSecretManager() {
-    if (dtsm != null) {
-      dtsm.stopThreads();
-    }
+    dtsm.stop();
   }
   
   @Test

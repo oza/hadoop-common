@@ -54,24 +54,8 @@ public class NMContainerTokenSecretManager extends
   
   private String nodeHostAddr;
 
-  private class NMContainerTokenSecretServiceHandler implements ServiceHandler {
-
-    @Override
-    public void serviceInit(Configuration conf) throws Exception {
-    }
-
-    @Override
-    public void serviceStart() throws Exception {
-    }
-
-    @Override
-    public void serviceStop() throws Exception {
-    }
-  }
-  
   public NMContainerTokenSecretManager() {
     super(NMContainerTokenSecretManager.class.getName());
-    registerServiceHandler(new NMContainerTokenSecretServiceHandler());
     recentlyStartedContainerTracker =
       new TreeMap<Long, List<ContainerId>>();
   }

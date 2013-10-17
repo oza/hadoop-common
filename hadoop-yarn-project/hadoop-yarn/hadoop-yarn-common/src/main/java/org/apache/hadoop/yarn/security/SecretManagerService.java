@@ -43,58 +43,11 @@ public abstract class SecretManagerService<T extends TokenIdentifier> extends
     SecretManager<T> implements Service {
   private static Log LOG = LogFactory
     .getLog(SecretManagerService.class);
-  private final InternalSecretManagerService secretManagerService;
-
-  class InternalSecretManagerService extends AbstractService {
-    ArrayList<ServiceHandler> serviceHandlers;
-    /**
-     * Construct the service.
-     *
-     * @param name service name
-     */
-    public InternalSecretManagerService(String name) {
-      super(name);
-      serviceHandlers = new ArrayList<ServiceHandler>();
-    }
-
-    @Override
-    protected void serviceInit(Configuration conf) throws Exception {
-      for (ServiceHandler handler :serviceHandlers){
-        handler.serviceInit(conf);
-      }
-    }
-    @Override
-    protected void serviceStart() throws Exception {
-      for (ServiceHandler handler :serviceHandlers){
-        handler.serviceStart();
-      }
-    }
-    @Override
-    protected void serviceStop() throws Exception {
-      // serviceStop callbacks handlers in reverse order of
-      // "serviceStart" method.
-      Collections.reverse(serviceHandlers);
-      try {
-        for (ServiceHandler handler : serviceHandlers){
-          handler.serviceStop();
-        }
-      } finally {
-        Collections.reverse(serviceHandlers);
-      }
-    }
-
-    public void setConfig(Configuration conf) {
-      super.setConfig(conf);
-    }
-
-    public void registerServiceHandler(ServiceHandler handler) {
-      serviceHandlers.add(handler);
-    }
-  }
+  private final SecretManagerServiceInternal secretManagerService;
 
   public SecretManagerService(String serviceName) {
     secretManagerService =
-      new InternalSecretManagerService(serviceName);
+      new SecretManagerServiceInternal(serviceName);
   }
 
   @Override

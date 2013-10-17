@@ -99,7 +99,8 @@ public class TestClientRMTokens {
 
     RMDelegationTokenSecretManager rmDtSecretManager = createRMDelegationTokenSecretManager(
         initialInterval, maxLifetime, renewInterval);
-    rmDtSecretManager.startThreads();
+    rmDtSecretManager.init(conf);
+    rmDtSecretManager.start();
     LOG.info("Creating DelegationTokenSecretManager with initialInterval: "
         + initialInterval + ", maxLifetime: " + maxLifetime
         + ", renewInterval: " + renewInterval);
@@ -224,7 +225,7 @@ public class TestClientRMTokens {
 
 
     } finally {
-      rmDtSecretManager.stopThreads();
+      rmDtSecretManager.stop();
       // TODO PRECOMMIT Close proxies.
       if (clientRMWithDT != null) {
         RPC.stopProxy(clientRMWithDT);

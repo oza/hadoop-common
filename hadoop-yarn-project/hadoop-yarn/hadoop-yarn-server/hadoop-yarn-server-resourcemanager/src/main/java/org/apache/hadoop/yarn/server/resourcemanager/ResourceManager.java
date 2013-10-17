@@ -202,9 +202,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMContainerTokenSecretManager();
   }
 
-  protected NMTokenSecretManagerInRM createNMTokenSecretManager(
-      Configuration conf) {
-    return new NMTokenSecretManagerInRM(conf);
+  protected NMTokenSecretManagerInRM createNMTokenSecretManager() {
+    return new NMTokenSecretManagerInRM();
   }
   
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
@@ -317,7 +316,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
       containerTokenSecretManager = createContainerTokenSecretManager();
       addService(containerTokenSecretManager);
-      nmTokenSecretManager = createNMTokenSecretManager(conf);
+      nmTokenSecretManager = createNMTokenSecretManager();
+      addService(nmTokenSecretManager);
 
       boolean isRecoveryEnabled = conf.getBoolean(
           YarnConfiguration.RECOVERY_ENABLED,
@@ -404,6 +404,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       // Register event handler for RMAppManagerEvents
       rmDispatcher.register(RMAppManagerEventType.class, rmAppManager);
       rmDTSecretManager = createRMDelegationTokenSecretManager(rmContext);
+      addService(rmDTSecretManager);
       rmContext.setRMDelegationTokenSecretManager(rmDTSecretManager);
       clientRM = createClientRMService();
       rmContext.setClientRMService(clientRM);
@@ -429,8 +430,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceStart() throws Exception {
-      nmTokenSecretManager.start();
-
       RMStateStore rmStore = rmContext.getStateStore();
       // The state store needs to start irrespective of recoveryEnabled as apps
       // need events to move to further states.
@@ -449,11 +448,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
 
       startWepApp();
-      try {
-        rmDTSecretManager.startThreads();
-      } catch(IOException ie) {
-        throw new YarnRuntimeException("Failed to start secret manager threads", ie);
-      }
 
       if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
         int port = webApp.port();
@@ -468,14 +462,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       if (webApp != null) {
         webApp.stop();
       }
-      if (rmDTSecretManager != null) {
-        rmDTSecretManager.stopThreads();
-      }
-
-      if(nmTokenSecretManager != null) {
-        nmTokenSecretManager.stop();
-      }
-
       DefaultMetricsSystem.shutdown();
 
       if (rmContext != null) {

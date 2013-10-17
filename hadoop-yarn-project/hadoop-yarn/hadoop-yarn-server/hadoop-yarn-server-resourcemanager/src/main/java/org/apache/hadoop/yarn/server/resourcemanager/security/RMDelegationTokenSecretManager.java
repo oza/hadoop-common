@@ -29,8 +29,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 import org.apache.hadoop.yarn.security.client.DelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -54,6 +56,24 @@ public class RMDelegationTokenSecretManager extends
 
   protected final RMContext rmContext;
 
+
+  private class RMDelegationTokenServiceHandler implements ServiceHandler {
+
+    @Override
+    public void serviceInit(Configuration conf) throws Exception {
+      startThreads();
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+    }
+
+    @Override
+    public void serviceStop() throws Exception {
+      stopThreads();
+    }
+  }
+
   /**
    * Create a secret manager
    * @param delegationKeyUpdateInterval the number of seconds for rolling new
@@ -72,6 +92,7 @@ public class RMDelegationTokenSecretManager extends
     super(RMDelegationTokenSecretManager.class.getName(),
           delegationKeyUpdateInterval, delegationTokenMaxLifetime,
           delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+    registerServiceHandler(new RMDelegationTokenServiceHandler());
     this.rmContext = rmContext;
   }
 

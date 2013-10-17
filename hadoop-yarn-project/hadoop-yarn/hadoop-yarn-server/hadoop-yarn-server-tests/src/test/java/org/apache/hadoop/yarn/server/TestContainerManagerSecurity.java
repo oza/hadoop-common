@@ -188,7 +188,8 @@ public class TestContainerManagerSecurity {
     StringBuilder sb;
     // testInvalidNMToken ... creating NMToken using different secret manager.
     
-    NMTokenSecretManagerInRM tempManager = new NMTokenSecretManagerInRM(conf);
+    NMTokenSecretManagerInRM tempManager = new NMTokenSecretManagerInRM();
+    tempManager.init(conf);
     tempManager.rollMasterKey();
     do {
       tempManager.rollMasterKey();
