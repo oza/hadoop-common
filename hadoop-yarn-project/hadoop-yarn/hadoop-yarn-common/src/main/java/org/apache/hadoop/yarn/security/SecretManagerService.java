@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.security;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +41,8 @@ import java.util.*;
 @Evolving
 public abstract class SecretManagerService<T extends TokenIdentifier> extends
     SecretManager<T> implements Service {
+  private static Log LOG = LogFactory
+    .getLog(SecretManagerService.class);
   private final InternalSecretManagerService secretManagerService;
 
   class InternalSecretManagerService extends AbstractService {
@@ -77,6 +81,14 @@ public abstract class SecretManagerService<T extends TokenIdentifier> extends
       } finally {
         Collections.reverse(serviceHandlers);
       }
+    }
+
+    public void setConfig(Configuration conf) {
+      super.setConfig(conf);
+    }
+
+    public void registerServiceHandler(ServiceHandler handler) {
+      serviceHandlers.add(handler);
     }
   }
 
@@ -165,4 +177,68 @@ public abstract class SecretManagerService<T extends TokenIdentifier> extends
     return secretManagerService.getBlockers();
   }
 
+    /* ===================================================================== */
+  /* Override Points */
+  /* ===================================================================== */
+
+  /**
+   * All initialization code needed by a service.
+   *
+   * This method will only ever be called once during the lifecycle of
+   * a specific service instance.
+   *
+   * Implementations do not need to be synchronized as the logic
+   * in {@link #init(Configuration)} prevents re-entrancy.
+   *
+   * The base implementation checks to see if the subclass has created
+   * a new configuration instance, and if so, updates the base class value
+   * @param conf configuration
+   * @throws Exception on a failure -these will be caught,
+   * possibly wrapped, and wil; trigger a service stop
+   */
+  protected void serviceInit(Configuration conf) throws Exception {
+    if (conf != getConfig()) {
+      LOG.debug("Config has been overridden during init");
+      secretManagerService.setConfig(conf);
+    }
+  }
+
+  /**
+   * Actions called during the INITED to STARTED transition.
+   *
+   * This method will only ever be called once during the lifecycle of
+   * a specific service instance.
+   *
+   * Implementations do not need to be synchronized as the logic
+   * in {@link #start()} prevents re-entrancy.
+   *
+   * @throws Exception if needed -these will be caught,
+   * wrapped, and trigger a service stop
+   */
+  protected void serviceStart() throws Exception {
+
+  }
+
+  /**
+   * Actions called during the transition to the STOPPED state.
+   *
+   * This method will only ever be called once during the lifecycle of
+   * a specific service instance.
+   *
+   * Implementations do not need to be synchronized as the logic
+   * in {@link #stop()} prevents re-entrancy.
+   *
+   * Implementations MUST write this to be robust against failures, including
+   * checks for null references -and for the first failure to not stop other
+   * attempts to shut down parts of the service.
+   *
+   * @throws Exception if needed -these will be caught and logged.
+   */
+  protected void serviceStop() throws Exception {
+
+  }
+
+  public void registerServiceHandler(ServiceHandler handler) {
+    secretManagerService.registerServiceHandler(handler);
+  }
 }

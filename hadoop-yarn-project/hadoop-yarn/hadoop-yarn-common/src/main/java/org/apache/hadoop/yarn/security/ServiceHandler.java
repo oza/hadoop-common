@@ -21,25 +21,15 @@ package org.apache.hadoop.yarn.security;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.service.LifecycleEvent;
-import org.apache.hadoop.service.Service;
-import org.apache.hadoop.service.ServiceStateChangeListener;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
- * BasicService interface is callback interface for SecretManagerService.
+ * ServiceHandler interface is callback interface for SecretManagerService.
  * These callbacks are identical to AbstractService class's methods and
  * callbacked from same-name methods.
  */
 @Public
 @Evolving
-interface ServiceHandler {
+public interface ServiceHandler {
   public void serviceInit(Configuration conf) throws Exception;
   public void serviceStart() throws Exception;
   public void serviceStop() throws Exception;
