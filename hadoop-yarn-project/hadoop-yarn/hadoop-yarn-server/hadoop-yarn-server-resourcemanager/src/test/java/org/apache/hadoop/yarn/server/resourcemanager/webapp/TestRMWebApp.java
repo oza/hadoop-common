@@ -202,7 +202,7 @@ public class TestRMWebApp {
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-        null, new RMContainerTokenSecretManager(conf),
+        null, new RMContainerTokenSecretManager(),
         new NMTokenSecretManagerInRM(conf),
         new ClientToAMTokenSecretManagerInRM()));
     return cs;

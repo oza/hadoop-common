@@ -157,7 +157,7 @@ public class TestFifoScheduler {
     AsyncDispatcher dispatcher = new InlineDispatcher();
     Configuration conf = new Configuration();
     RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(conf);
+        new RMContainerTokenSecretManager();
     containerTokenSecretManager.rollMasterKey();
     NMTokenSecretManagerInRM nmTokenSecretManager =
         new NMTokenSecretManagerInRM(conf);

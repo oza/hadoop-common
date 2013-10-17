@@ -86,8 +86,8 @@ public class TestUtils {
     Configuration conf = new Configuration();
     RMContext rmContext =
         new RMContextImpl(nullDispatcher, cae, null, null, null,
-          new AMRMTokenSecretManager(conf),
-          new RMContainerTokenSecretManager(conf),
+          new AMRMTokenSecretManager(),
+          new RMContainerTokenSecretManager(),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
     

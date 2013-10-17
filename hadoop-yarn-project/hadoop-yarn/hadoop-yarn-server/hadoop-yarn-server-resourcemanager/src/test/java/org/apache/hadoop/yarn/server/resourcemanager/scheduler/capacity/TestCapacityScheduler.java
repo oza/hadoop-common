@@ -343,7 +343,7 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf),
+      null, new RMContainerTokenSecretManager(),
       new NMTokenSecretManagerInRM(conf),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
@@ -442,7 +442,7 @@ public class TestCapacityScheduler {
     conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf),
+      null, new RMContainerTokenSecretManager(),
       new NMTokenSecretManagerInRM(conf),
       new ClientToAMTokenSecretManagerInRM()));
   }
@@ -455,7 +455,7 @@ public class TestCapacityScheduler {
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
-      null, null, new RMContainerTokenSecretManager(csConf),
+      null, null, new RMContainerTokenSecretManager(),
       new NMTokenSecretManagerInRM(csConf),
       new ClientToAMTokenSecretManagerInRM()));
 
@@ -482,7 +482,7 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf),
+      null, new RMContainerTokenSecretManager(),
       new NMTokenSecretManagerInRM(conf),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);

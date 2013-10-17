@@ -119,7 +119,7 @@ public class TestRMAppAttemptTransitions {
   private RMAppAttempt applicationAttempt;
 
   private Configuration conf = new Configuration();
-  private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager(conf));
+  private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager());
   private ClientToAMTokenSecretManagerInRM clientToAMTokenManager =
       spy(new ClientToAMTokenSecretManagerInRM());
   
@@ -205,7 +205,7 @@ public class TestRMAppAttemptTransitions {
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, amRMTokenManager,
-          new RMContainerTokenSecretManager(conf),
+          new RMContainerTokenSecretManager(),
           new NMTokenSecretManagerInRM(conf),
           clientToAMTokenManager);
     

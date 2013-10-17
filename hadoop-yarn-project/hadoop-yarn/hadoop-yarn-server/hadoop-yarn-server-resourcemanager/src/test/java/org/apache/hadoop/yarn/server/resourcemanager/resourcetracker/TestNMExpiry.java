@@ -84,7 +84,8 @@ public class TestNMExpiry {
     NodesListManager nodesListManager = new NodesListManager(context);
     nodesListManager.init(conf);
     RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(conf);
+        new RMContainerTokenSecretManager();
+    containerTokenSecretManager.init(conf);
     containerTokenSecretManager.start();
     NMTokenSecretManagerInRM nmTokenSecretManager =
         new NMTokenSecretManagerInRM(conf);

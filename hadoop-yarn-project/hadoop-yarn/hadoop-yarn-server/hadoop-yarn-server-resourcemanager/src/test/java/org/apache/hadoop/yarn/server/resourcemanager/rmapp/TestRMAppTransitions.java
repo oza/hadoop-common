@@ -190,8 +190,8 @@ public class TestRMAppTransitions {
     this.rmContext =
         new RMContextImpl(rmDispatcher, store,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new AMRMTokenSecretManager(conf),
-          new RMContainerTokenSecretManager(conf),
+          null, new AMRMTokenSecretManager(),
+          new RMContainerTokenSecretManager(),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
 

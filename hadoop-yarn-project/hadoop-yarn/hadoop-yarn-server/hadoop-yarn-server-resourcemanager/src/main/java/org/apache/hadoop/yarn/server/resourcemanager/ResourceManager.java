@@ -198,9 +198,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     ((RMContextImpl) rmContext).setStateStore(rmStore);
   }
 
-  protected RMContainerTokenSecretManager createContainerTokenSecretManager(
-      Configuration conf) {
-    return new RMContainerTokenSecretManager(conf);
+  protected RMContainerTokenSecretManager createContainerTokenSecretManager() {
+    return new RMContainerTokenSecretManager();
   }
 
   protected NMTokenSecretManagerInRM createNMTokenSecretManager(
@@ -316,7 +315,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
       addService(amFinishingMonitor);
 
-      containerTokenSecretManager = createContainerTokenSecretManager(conf);
+      containerTokenSecretManager = createContainerTokenSecretManager();
+      addService(containerTokenSecretManager);
       nmTokenSecretManager = createNMTokenSecretManager(conf);
 
       boolean isRecoveryEnabled = conf.getBoolean(
@@ -429,8 +429,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceStart() throws Exception {
-      amRmTokenSecretManager.start();
-      containerTokenSecretManager.start();
       nmTokenSecretManager.start();
 
       RMStateStore rmStore = rmContext.getStateStore();
@@ -474,12 +472,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         rmDTSecretManager.stopThreads();
       }
 
-      if (amRmTokenSecretManager != null) {
-        amRmTokenSecretManager.stop();
-      }
-      if (containerTokenSecretManager != null) {
-        containerTokenSecretManager.stop();
-      }
       if(nmTokenSecretManager != null) {
         nmTokenSecretManager.stop();
       }

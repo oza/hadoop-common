@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
@@ -50,47 +51,56 @@ public class RMContainerTokenSecretManager extends
 
   private MasterKeyData nextMasterKey;
 
-  private final Timer timer;
-  private final long rollingInterval;
-  private final long activationDelay;
+  private Timer timer;
+  private long rollingInterval;
+  private long activationDelay;
 
-  public RMContainerTokenSecretManager(Configuration conf) {
-    super(RMContainerTokenSecretManager.class.getName(), conf);
+  class RMContainerTokenServiceHandler implements ServiceHandler {
 
-    this.timer = new Timer();
-    this.rollingInterval = conf.getLong(
-            YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
-            YarnConfiguration.DEFAULT_RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
-    // Add an activation delay. This is to address the following race: RM may
-    // roll over master-key, scheduling may happen at some point of time, a
-    // container created with a password generated off new master key, but NM
-    // might not have come again to RM to update the shared secret: so AM has a
-    // valid password generated off new secret but NM doesn't know about the
-    // secret yet.
-    // Adding delay = 1.5 * expiry interval makes sure that all active NMs get
-    // the updated shared-key.
-    this.activationDelay =
+    @Override
+    public void serviceInit(Configuration conf) throws Exception {
+      timer = new Timer();
+      rollingInterval = conf.getLong(
+        YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
+        YarnConfiguration.DEFAULT_RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS) * 1000;
+      // Add an activation delay. This is to address the following race: RM may
+      // roll over master-key, scheduling may happen at some point of time, a
+      // container created with a password generated off new master key, but NM
+      // might not have come again to RM to update the shared secret: so AM has a
+      // valid password generated off new secret but NM doesn't know about the
+      // secret yet.
+      // Adding delay = 1.5 * expiry interval makes sure that all active NMs get
+      // the updated shared-key.
+      activationDelay =
         (long) (conf.getLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS) * 1.5);
-    LOG.info("ContainerTokenKeyRollingInterval: " + this.rollingInterval
-        + "ms and ContainerTokenKeyActivationDelay: " + this.activationDelay
+          YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS) * 1.5);
+      LOG.info("ContainerTokenKeyRollingInterval: " + rollingInterval
+        + "ms and ContainerTokenKeyActivationDelay: " + activationDelay
         + "ms");
-    if (rollingInterval <= activationDelay * 2) {
-      throw new IllegalArgumentException(
+      if (rollingInterval <= activationDelay * 2) {
+        throw new IllegalArgumentException(
           YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS
-              + " should be more than 2 X "
-              + YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS);
+            + " should be more than 2 X "
+            + YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS);
+      }
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+      rollMasterKey();
+      timer.scheduleAtFixedRate(new MasterKeyRoller(), rollingInterval,
+        rollingInterval);
+    }
+
+    @Override
+    public void serviceStop() throws Exception {
+      timer.cancel();
     }
   }
 
-  public void start() {
-    rollMasterKey();
-    this.timer.scheduleAtFixedRate(new MasterKeyRoller(), rollingInterval,
-        rollingInterval);
-  }
-
-  public void stop() {
-    this.timer.cancel();
+  public RMContainerTokenSecretManager() {
+    super(RMContainerTokenSecretManager.class.getName());
+    registerServiceHandler(new RMContainerTokenServiceHandler());
   }
 
   /**

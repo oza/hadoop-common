@@ -90,7 +90,7 @@ public class TestApplicationLimits {
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     RMContainerTokenSecretManager containerTokenSecretManager =
-        new RMContainerTokenSecretManager(conf);
+        new RMContainerTokenSecretManager();
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);

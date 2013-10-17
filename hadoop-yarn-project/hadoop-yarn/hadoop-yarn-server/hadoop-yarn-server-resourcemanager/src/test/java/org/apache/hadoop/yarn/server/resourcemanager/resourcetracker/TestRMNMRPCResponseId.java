@@ -70,7 +70,7 @@ public class TestRMNMRPCResponseId {
     });
     RMContext context =
         new RMContextImpl(dispatcher, null, null, null, null,
-          null, new RMContainerTokenSecretManager(conf),
+          null, new RMContainerTokenSecretManager(),
           new NMTokenSecretManagerInRM(conf), null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));

@@ -545,7 +545,8 @@ public class TestContainerManagerSecurity {
         yarnCluster.getResourceManager().getRMContainerTokenSecretManager();
     
     RMContainerTokenSecretManager tamperedContainerTokenSecretManager =
-        new RMContainerTokenSecretManager(conf);
+        new RMContainerTokenSecretManager();
+    tamperedContainerTokenSecretManager.init(conf);
     tamperedContainerTokenSecretManager.rollMasterKey();
     do {
       tamperedContainerTokenSecretManager.rollMasterKey();
