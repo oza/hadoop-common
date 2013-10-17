@@ -31,6 +31,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.SecretManagerService;
+import org.apache.hadoop.yarn.security.ServiceHandler;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 /**
@@ -57,14 +58,31 @@ public class BaseContainerTokenSecretManager extends
    */
   protected MasterKeyData currentMasterKey;
 
-  protected final long containerTokenExpiryInterval;
+  protected long containerTokenExpiryInterval;
 
-  public BaseContainerTokenSecretManager(String serviceName,
-                                         Configuration conf) {
-    super(serviceName);
-    this.containerTokenExpiryInterval =
+  private class BaseContainerTokenServiceHandler implements ServiceHandler {
+
+    @Override
+    public void serviceInit(Configuration conf) throws Exception {
+      containerTokenExpiryInterval =
         conf.getInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
           YarnConfiguration.DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS);
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void serviceStop() throws Exception {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+  }
+
+  public BaseContainerTokenSecretManager(String serviceName) {
+    super(serviceName);
+    registerServiceHandler(new BaseContainerTokenServiceHandler());
   }
 
   // Need lock as we increment serialNo etc.
