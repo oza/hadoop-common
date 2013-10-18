@@ -206,7 +206,7 @@ public class TestRMAppAttemptTransitions {
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, amRMTokenManager,
           new RMContainerTokenSecretManager(),
-          new NMTokenSecretManagerInRM(conf),
+          new NMTokenSecretManagerInRM(),
           clientToAMTokenManager);
     
     RMStateStore store = mock(RMStateStore.class);

@@ -344,7 +344,7 @@ public class TestCapacityScheduler {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(),
-      new NMTokenSecretManagerInRM(conf),
+      new NMTokenSecretManagerInRM(),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
@@ -443,7 +443,7 @@ public class TestCapacityScheduler {
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(),
-      new NMTokenSecretManagerInRM(conf),
+      new NMTokenSecretManagerInRM(),
       new ClientToAMTokenSecretManagerInRM()));
   }
 
@@ -456,7 +456,7 @@ public class TestCapacityScheduler {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
       null, null, new RMContainerTokenSecretManager(),
-      new NMTokenSecretManagerInRM(csConf),
+      new NMTokenSecretManagerInRM(),
       new ClientToAMTokenSecretManagerInRM()));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
@@ -483,7 +483,7 @@ public class TestCapacityScheduler {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(),
-      new NMTokenSecretManagerInRM(conf),
+      new NMTokenSecretManagerInRM(),
       new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 

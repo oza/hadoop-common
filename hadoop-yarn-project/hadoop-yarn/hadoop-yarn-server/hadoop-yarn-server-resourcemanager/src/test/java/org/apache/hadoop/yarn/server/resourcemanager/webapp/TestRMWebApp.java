@@ -203,7 +203,7 @@ public class TestRMWebApp {
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
         null, new RMContainerTokenSecretManager(),
-        new NMTokenSecretManagerInRM(conf),
+        new NMTokenSecretManagerInRM(),
         new ClientToAMTokenSecretManagerInRM()));
     return cs;
   }

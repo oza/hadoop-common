@@ -71,7 +71,7 @@ public class TestRMNMRPCResponseId {
     RMContext context =
         new RMContextImpl(dispatcher, null, null, null, null,
           null, new RMContainerTokenSecretManager(),
-          new NMTokenSecretManagerInRM(conf), null);
+          new NMTokenSecretManagerInRM(), null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
     NodesListManager nodesListManager = new NodesListManager(context);

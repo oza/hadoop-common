@@ -46,7 +46,7 @@ public class TestQueueParsing {
     capacityScheduler.setConf(conf);
     capacityScheduler.reinitialize(conf, new RMContextImpl(null, null,
       null, null, null, null, new RMContainerTokenSecretManager(),
-      new NMTokenSecretManagerInRM(conf),
+      new NMTokenSecretManagerInRM(),
       new ClientToAMTokenSecretManagerInRM()));
     
     CSQueue a = capacityScheduler.getQueue("a");

@@ -160,7 +160,7 @@ public class TestFifoScheduler {
         new RMContainerTokenSecretManager();
     containerTokenSecretManager.rollMasterKey();
     NMTokenSecretManagerInRM nmTokenSecretManager =
-        new NMTokenSecretManagerInRM(conf);
+        new NMTokenSecretManagerInRM();
     nmTokenSecretManager.rollMasterKey();
     RMContext rmContext = new RMContextImpl(dispatcher, null, null, null, null,
         null, containerTokenSecretManager, nmTokenSecretManager, null);

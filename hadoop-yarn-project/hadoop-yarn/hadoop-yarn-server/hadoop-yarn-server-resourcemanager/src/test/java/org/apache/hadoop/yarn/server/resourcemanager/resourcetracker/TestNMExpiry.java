@@ -88,7 +88,8 @@ public class TestNMExpiry {
     containerTokenSecretManager.init(conf);
     containerTokenSecretManager.start();
     NMTokenSecretManagerInRM nmTokenSecretManager =
-        new NMTokenSecretManagerInRM(conf);
+        new NMTokenSecretManagerInRM();
+    nmTokenSecretManager.init(conf);
     nmTokenSecretManager.start();
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, nmLivelinessMonitor, containerTokenSecretManager,

@@ -192,7 +192,7 @@ public class TestRMAppTransitions {
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new AMRMTokenSecretManager(),
           new RMContainerTokenSecretManager(),
-          new NMTokenSecretManagerInRM(conf),
+          new NMTokenSecretManagerInRM(),
           new ClientToAMTokenSecretManagerInRM());
 
     rmDispatcher.register(RMAppAttemptEventType.class,

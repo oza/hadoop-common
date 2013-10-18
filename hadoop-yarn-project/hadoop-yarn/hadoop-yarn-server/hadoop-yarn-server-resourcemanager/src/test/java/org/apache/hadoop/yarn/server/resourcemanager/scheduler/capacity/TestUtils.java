@@ -88,7 +88,7 @@ public class TestUtils {
         new RMContextImpl(nullDispatcher, cae, null, null, null,
           new AMRMTokenSecretManager(),
           new RMContainerTokenSecretManager(),
-          new NMTokenSecretManagerInRM(conf),
+          new NMTokenSecretManagerInRM(),
           new ClientToAMTokenSecretManagerInRM());
     
     return rmContext;
