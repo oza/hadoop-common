@@ -112,6 +112,7 @@ public class TestClientRMService {
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
     dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000, rmContext);
     dtsm.init(new Configuration());
+    dtsm.start();
   }
 
   @AfterClass
