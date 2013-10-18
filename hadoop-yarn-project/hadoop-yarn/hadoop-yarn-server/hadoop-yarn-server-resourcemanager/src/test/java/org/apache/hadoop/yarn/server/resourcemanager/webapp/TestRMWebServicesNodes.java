@@ -80,8 +80,13 @@ public class TestRMWebServicesNodes extends JerseyTest {
       bind(JAXBContextResolver.class);
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
+      Configuration conf = new Configuration();
       rm = new MockRM(new Configuration());
+      rm.getRMContainerTokenSecretManager().init(conf);
+      rm.getRMContainerTokenSecretManager().start();
       rm.getRMContainerTokenSecretManager().rollMasterKey();
+      rm.getRMNMTokenSecretManager().init(conf);
+      rm.getRMNMTokenSecretManager().start();
       rm.getRMNMTokenSecretManager().rollMasterKey();
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());

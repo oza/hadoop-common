@@ -616,6 +616,7 @@ public class TestRMRestart {
 
     MockRM rm1 = new TestSecurityMockRM(conf, memStore);
 
+    rm1.init(conf);
     rm1.start();
 
     // create an empty credential

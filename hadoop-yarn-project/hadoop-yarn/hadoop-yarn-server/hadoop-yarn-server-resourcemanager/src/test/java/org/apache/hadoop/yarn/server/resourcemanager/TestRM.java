@@ -26,6 +26,7 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -150,7 +151,7 @@ public class TestRM {
       
       NMTokenSecretManagerInRM nmTokenSecretManager =
           rm.getRMContext().getNMTokenSecretManager();
-      
+
       // submitting new application
       RMApp app = rm.submitApp(1000);
       

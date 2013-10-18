@@ -61,11 +61,11 @@ public class RMDelegationTokenSecretManager extends
 
     @Override
     public void serviceInit(Configuration conf) throws Exception {
-      startThreads();
     }
 
     @Override
     public void serviceStart() throws Exception {
+      startThreads();
     }
 
     @Override

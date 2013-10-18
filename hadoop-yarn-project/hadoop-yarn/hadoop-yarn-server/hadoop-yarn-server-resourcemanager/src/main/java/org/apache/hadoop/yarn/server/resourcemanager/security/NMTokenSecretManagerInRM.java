@@ -102,6 +102,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
   
   public NMTokenSecretManagerInRM() {
     super(NMTokenSecretManagerInRM.class.getName());
+    registerServiceHandler(new NMTokenSecretServiceHandler());
     appAttemptToNodeKeyMap =
       new ConcurrentHashMap<ApplicationAttemptId, HashSet<NodeId>>();
   }
